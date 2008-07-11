@@ -1,0 +1,53 @@
+Processes:
+  tcp -> binary list, simple msg -> tcp
+  binary list -> structured message
+  thing what gets the messages and dishes them out?
+  world server
+    stores obstacles, raycasts them
+    accepts geospatial queries
+  (eventually, fake martians)
+  Stuff.
+
+Message progress:
+  tcp to msgsplit
+  iolist to msgfmt
+  structured to disher
+  on T:
+    static objects to world
+    (martians to martian emulator?)
+  on B/C/K/E: halt stuff
+  on I:
+    construct static info; kick off stuff
+
+  Then, the decider
+    should probably send directly to the tcp port
+  Perhaps the decider is informed by the caster or whatever
+
+Gratuitous robustification:
+  supervisor to restart stuff
+  separate state backup processes
+
+Idea 1:
+  pedal to the metal
+  cast rays in various directions
+    bodge up utility from towards-home-ness and distance of nearest obstacle
+    and try to turn "towards" best found
+  will probably fail miserably at maps that need actual pathfinding
+  and how to integrate martians?
+    can calculate frontier of death ignoring obstacles and cast to that
+      (ugh)
+    vague aversion term
+      (mitigate if not LoS?)
+
+Gah, raycasting:
+  foo = here - there
+  r**2 = (foox + t cos(th)) ** 2 + (fooy + t sin(th)) ** 2
+       = foox**2 + 2fooxtcosth + t2 cos2th 
+       + fooy**2 + 2fooytsinth + t2 sin2th
+       = |foo|**2 + t2 + 2t(foox costh + fooy sinth)
+
+- b +- \sqrt{b^2 - 4ac} / 2a
+
+       a = 1
+       b = 2(foox costh + fooy sinth)
+       c = |foo|**2 - r**2
