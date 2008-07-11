@@ -5,7 +5,7 @@ Processes:
   world server
     stores obstacles, raycasts them
     accepts geospatial queries
-  (eventually, fake martians)
+  (eventually, fake martians?)
   Stuff.
 
 Message progress:
@@ -38,6 +38,10 @@ Idea 1:
       (ugh)
     vague aversion term
       (mitigate if not LoS?)
+  OKAY.  Break down as:
+    process that periodically asks for the best heading and dturns toward it
+    process that keeps the "best" heading
+    
 
 Gah, raycasting:
   foo = here - there

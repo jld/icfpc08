@@ -1,6 +1,7 @@
 -module(gis).
 -include("stuff.hrl").
--export([vstate/0, world/1, cast/4, cast1/5]).
+-export([vstate/0, world/1, world/2, 
+	 walls/1, cast/4, cast1/5]).
 
 vstate() -> receive {set_vstate, VS} -> vstate(VS, []) end.
 
@@ -30,7 +31,10 @@ world(Ini, Stuff) ->
 	    end;
 	{cast, X, Y, D, K} ->
 	    K ! {hit, cast(X, Y, D, walls(Ini) ++ Stuff)},
-	    world(Ini, Stuff)
+	    world(Ini, Stuff);
+	{dump, K} -> 
+	    K ! {world_dump, Stuff};
+	upgrade -> ?MODULE:world(Ini, Stuff)
     end.
 
 walls(#init{ x_limit = XL, y_limit = YL }) ->
@@ -40,9 +44,9 @@ cast(X, Y, D, Stuff) ->
     RD = D * math:pi() / 180,
     cast([], X, Y, math:cos(RD), math:sin(RD), Stuff).
 cast(Near, _X, _Y, _DX, _DY, []) -> Near;
-cast({ND, _NO} = Near, X, Y, DX, DY, [Thing |Stuff]) ->
-    {HD, _HO} = Hit = cast1(X, Y, DX, DY, Thing),
-    cast(if HD < ND -> Hit; true -> Near end,
+cast(Near, X, Y, DX, DY, [Thing |Stuff]) ->
+    Hit = cast1(X, Y, DX, DY, Thing),
+    cast(if Hit < Near -> Hit; true -> Near end,
 	 X, Y, DX, DY, Stuff).
 
 cast1(_X, Y, _DX, DY, {horiz, OY} = Obj) ->
