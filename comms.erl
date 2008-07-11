@@ -1,6 +1,13 @@
 -module(comms).
 -include("stuff.hrl").
+-export([msgfmt/0, msgfmt/1, 
+	 msgsplit/0, msgsplit/1,
+	 to_struct/1]).
 
+msgfmt() ->
+    receive
+	{set_proc, P} -> msgfmt(P)
+    end.
 msgfmt(P) ->
     receive 
 	eof -> bees;
@@ -39,11 +46,11 @@ objs_to_struct([<<"m">> |Rest]) ->
     objs_to_struct_dy(martian, ?RAD_MARTIAN, Rest).
 
 objs_to_struct_st(Type, [X,Y,R |Objs]) ->
-    [{Type, #mob{ x = btof(X), y = btof(X), r = btof(R) }}
+    [{Type, #mob{ x = btof(X), y = btof(Y), r = btof(R) }}
      |objs_to_struct(Objs)].
 
 objs_to_struct_dy(Type, R, [X,Y,D,S |Objs]) ->
-    [{Type, #mob{ x = btof(X), y = btof(X), dir = btof(D), speed = btof(S),
+    [{Type, #mob{ x = btof(X), y = btof(Y), dir = btof(D), speed = btof(S),
 		  r = R }} |objs_to_struct(Objs)].
 
 
