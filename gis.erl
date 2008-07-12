@@ -16,8 +16,10 @@ vstate(VS, Obs) ->
 	{unobserve, K} ->
 	    vstate(VS, lists:delete(K, Obs));
 	{set_vstate, NVS} ->
-	    lists:foreach(fun (K) -> K ! {vstat, NVS} end, Obs),
-	    vstate(VS, Obs)
+	    lists:foreach(fun (K) -> K ! {vstate, NVS} end, Obs),
+	    vstate(VS, Obs);
+	Other ->
+	    io:format("vstate: unreognized message ~w~n", [Other])
     end.
 
 world(Ini) -> world(Ini, []).
@@ -30,11 +32,13 @@ world(Ini, Stuff) ->
 		false -> world(Ini, [Obj |Stuff])
 	    end;
 	{cast, X, Y, D, K} ->
-	    K ! {hit, cast(X, Y, D, walls(Ini) ++ Stuff)},
+	    K ! {hit, D, cast(X, Y, D, walls(Ini) ++ Stuff)},
 	    world(Ini, Stuff);
 	{dump, K} -> 
 	    K ! {world_dump, Stuff};
-	upgrade -> ?MODULE:world(Ini, Stuff)
+	upgrade -> ?MODULE:world(Ini, Stuff);
+	Other ->
+	    io:format("world: unreognized message ~w~n", [Other])
     end.
 
 walls(#init{ x_limit = XL, y_limit = YL }) ->

@@ -1,9 +1,13 @@
 -module(comms).
 -include("stuff.hrl").
--export([msgfmt/0, msgfmt/1, 
+-export([scmd/2,
+	 msgfmt/0, msgfmt/1, 
 	 msgsplit/0, msgsplit/1,
 	 to_struct/1, to_fields/1, list_to_num/1,
 	 binsplit/2]).
+
+scmd(S, A) ->
+    gen_tcp:send(S, atom_to_list(A)++";").
 
 msgfmt() ->
     receive

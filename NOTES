@@ -38,10 +38,14 @@ Idea 1:
       (ugh)
     vague aversion term
       (mitigate if not LoS?)
+  BEES:
+    ray casting might miss stuff.  stuff we're about to run into
+    how hard is cone/beam casting?
   OKAY.  Break down as:
     process that periodically asks for the best heading and dturns toward it
-    process that keeps the "best" heading
-    
+    process that gets notified of the world state and spams the raycasting
+      decrease spread around best on hit, increase on miss
+      on update, recast best and use that (and increase?)
 
 Gah, raycasting:
   foo = here - there
