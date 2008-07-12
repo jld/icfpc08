@@ -1,7 +1,7 @@
 -module(steerage).
 -include("stuff.hrl").
 -export([turn/3]).
--define(BEAM_WIDTH, 5.0).
+-define(BEAM_WIDTH, 5.0). % XXX this is a wild guess & may need tuning
 
 fixang(D) when D < -180.000001 -> fixang(D + 360);
 fixang(D) when D >= 180.000001 -> fixang(D - 360);
@@ -16,7 +16,7 @@ send_turn(Serv, TC, TG) when (TC > TG) and (TC > -2) ->
 send_turn(_Serv, _TC, _TG) -> ok.
 
 turn(Serv, VS, Dtarg) ->
-    % XXX do not use twice without intervening telemetry
+    % XXX do not use twice without intervening telemetry; this should be fixed
     Dfwd = (VS#vstate.vmob)#mob.dir,
     Ddel = fixang(Dtarg - Dfwd),
     Ttarg = trunc(Ddel / ?BEAM_WIDTH),

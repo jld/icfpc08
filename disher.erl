@@ -23,7 +23,8 @@ trial(Pvst, Pworld, Pdec) ->
 
 do_tele(Pvst, Pworld, {telemetry, VSt, Objs}) ->
     Pvst ! {set_vstate, VSt},
-    lists:foreach(fun (Obj) -> Pworld ! {seen, Obj} end, Objs).
+    lists:foreach(fun ({martian, _}) -> 'FIXME';
+		      (Obj) -> Pworld ! {seen, Obj} end, Objs).
 
 run(Pvst, Pworld, Pdec) ->
     receive

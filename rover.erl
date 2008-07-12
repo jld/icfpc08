@@ -1,5 +1,8 @@
 -module(rover).
 -export([start/1, start/2, call_server/3]).
+-ifndef(DECIDER).
+-define(DECIDER, raydec).
+-endif.
 
 start([Host, SPort]) ->
     start(Host, list_to_integer(SPort)).
@@ -11,7 +14,7 @@ start(Host, Port) ->
     receive
 	{ server_is, Serv } -> ok
     end,
-    Pdec = spawn(simpledec, start, [Serv, Pvst]),
+    Pdec = spawn(?DECIDER, start, [Serv, Pvst]),
     Pdsh = spawn(disher, start, [Pvst, Pdec]),
     Pmspl ! {set_proc, Pmfmt},
     Pmfmt ! {set_proc, Pdsh},

@@ -3,6 +3,8 @@
 -export([vstate/0, world/1, world/2, 
 	 walls/1, cast/4, cast1/5]).
 
+-define(FUDGE, 0.6).
+
 vstate() -> receive {set_vstate, VS} -> vstate(VS, []) end.
 
 vstate(VS, Obs) ->
@@ -22,7 +24,7 @@ vstate(VS, Obs) ->
 	    io:format("vstate: unreognized message ~w~n", [Other])
     end.
 
-world(Ini) -> world(Ini, []).
+world(Ini) -> world(Ini, [{home, #mob{ x = 0.0, y = 0.0, r = 5.0 }}]).
 
 world(Ini, Stuff) ->
     receive
@@ -70,7 +72,8 @@ cast1(X, _Y, DX, _DY, {vert, OX} = Obj) ->
 	    end
     end;
 
-cast1(X, Y, DX, DY, {_Type, #mob{ x = OX, y = OY, r = R }} = Obj) ->
+cast1(X, Y, DX, DY, {_Type, #mob{ x = OX, y = OY, r = RR }} = Obj) ->
+    R = RR + ?FUDGE,
     FooX = X - OX,
     FooY = Y - OY,
     FooR2 = FooX * FooX + FooY * FooY,

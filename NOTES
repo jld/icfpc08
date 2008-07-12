@@ -1,19 +1,20 @@
 So it sort of pretends to work now.
 ACTION ITEMS:
-  the ridiculous stochastic raycasting, as described below
-  fix the wobbling
-    have target rotation state -- neutral within N deg, soft within 2N
-    (split the vehicle ctl)
-    separate steering module
+  The supervisor, sooner rather than later.
   avoid spinning forever around the center
     if we're not on beam to go home, then
     2 pi distance to origin / time for 360 at full turn
     if faster then that, then lay off the gas, and optionally brake
     will ideally want to cadge together a test map (how?)
-  concern about missing small craters (or boulders?)
+  [DONE, +/-] the ridiculous stochastic raycasting, as described below
+  [DONE, +/-] concern about missing small craters (or boulders?)
     can hard-code a fudge factor in the gis
-    XXX: should add own radius to boulders (and m), but not craters
-  The supervisor, sooner rather than later.
+    XXX: should add own radius to boulders (and m) anyway, but not craters
+  [DONE] fix the wobbling
+    have target rotation state -- neutral within N deg, soft within 2N
+    (split the vehicle ctl)
+    separate steering module
+
 
 Raycasting summary:
   have best ray, random span
@@ -25,6 +26,8 @@ Raycasting summary:
              bonus for straight shot home (inverse?)
     if better, replace and scale down span (with minimum!)
     if worse, scale up span
+  on vstate change
+    
   THOUGHTS:
     raycast to martians; if crater (nearer than m), then don't worry so?
 
