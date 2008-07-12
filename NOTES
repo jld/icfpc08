@@ -1,13 +1,29 @@
-So it actually tries to avoid stuff now, but doesn't always work.
+The lightning round is done; prepare for the new world.
 
-Issue 1: when about to hit a wall regardless of turning, should brake
-  a more nuanced ray evaluator can take care of that
-    oh really?  How is a wall defined?
-  should still be able to get away with rays vs arcs here
-    or maybe not?
+Something has to watch the rotations and stuff; maybe it'll be the world server
+  so, the world gets sent (time, heading, speed) tuples
+  and it gets seen objects to add
+  and it gets martian lists to set (or ignore)
+  and it gets the init data initially, like now
+  and of course it's asked to cast (given dir, returns obj/dist and first turn)
 
-Issue 2: steering is a bit screwy
-  there is no excuse for some of the diving into craters I've seen
+Tasks:
+  compute rotational speed (from heading and last heading)
+  keep max abs rotational accel (from rs and last rs)
+  keep latest speed (later, try to care about a/b)
+  ---
+  maintain object database
+  walk through object database
+  hit test on object database cursor thing
+  simulate path for 100ms (or measure dt?) given turn state
+    path state: x, y, dir, odometer
+    alters state, returns optional hit object
+  fake steering (this dir * target dir -> turn state) 
+  These together become the arc cast
+    (when to stop?  make something up.)
+  
+
+========
 
 Maybe I should do an actual fake-physics trace (maybe less speed stuff)
   in C, on a quadtree
@@ -55,7 +71,6 @@ Stuff I really care about:
        unit gradient towards it
        max with zero
        cube it or something
-       
   robustification
 
 ========

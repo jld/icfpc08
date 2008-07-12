@@ -28,6 +28,7 @@ run(Serv, Pcast, Pworld) ->
 	    Pcast ! {get_best, self()},
 	    receive
 		{best, Tang, _Tut} ->
+		    io:format("Turning.~n"),
 		    steerage:turn(Serv, VS, Tang)
 	    end,
 	    run(Serv, Pcast, Pworld);
