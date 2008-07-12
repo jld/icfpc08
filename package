@@ -1,0 +1,20 @@
+#!/bin/sh
+set -e -x
+
+erlc *.erl
+
+mkdir -p stage/bin
+mkdir -p stage/lib
+mkdir -p stage/src
+
+echo 'Celestial Dire Badger' > stage/team
+echo 'Jed Davis <jld@ccs.neu.edu>' > stage/contact
+
+cp wrapper stage/bin/run
+chmod +x stage/bin/run
+cp *.beam stage/lib/
+cp *.erl README stage/src/
+
+mv stage icfpc08
+tar zcvf submission.tgz icfpc08
+mv icfpc08 stage

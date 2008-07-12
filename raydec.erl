@@ -73,7 +73,7 @@ figure_span(#raydec_cst{ vm = VM, pworld = Pworld}) ->
     end,
     TTL = Dist / (VM#mob.speed + 1.0e-12),
     Spin = Ini#init.max_hard_turn * TTL / 3,
-    io:format("Dist=~w TTL=~w Spin=~w~n", [Dist, TTL, Spin]),
+%    io:format("Dist=~w TTL=~w Spin=~w~n", [Dist, TTL, Spin]),
     if Spin > 180 -> 180;
        true -> Spin
     end.

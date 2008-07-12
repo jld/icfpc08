@@ -4,3 +4,5 @@
 \.beam$
 \.dump$
 ^dist$
+^stage$
+\.tgz$

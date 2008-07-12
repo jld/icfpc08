@@ -1,15 +1,13 @@
 So it sort of pretends to work now.
 ACTION ITEMS:
-  The steering is a bit overly daredevilish.
-  The ray evaluator kind of sucks.
-    Or maybe this span thing is just wrong.
-    Maybe roll for span on each cast?
+  The ray evaluator may suck
+    but the ray thing seems fundamentally broken anyway?  Sigh.
 
-  Allow calling a function (init:stop/0) on eof.
-    and general packaging
+  [DONE] Allow calling a function (init:stop/0) on eof.
+  General packaging
   The supervisor, sooner rather than later.
-  Death feedback.
-    meaningless unless the stuff actually works
+  Death feedback
+    meaningless unless e.g. the martian avoidance actually works; does it?
   avoid spinning forever around the center
     if we're not on beam to go home, then
     2 pi distance to origin / (360 / turn speed)
