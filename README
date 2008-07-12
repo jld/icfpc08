@@ -1,1 +1,43 @@
-Coming soon....
+The idea: stochastic ray-casting.  That is, cast a bunch of rays in
+random directions from the current location, see what if anything they
+hit, rate them based on that and which way home is, and try to steer
+towards the best one.  This doesn't account all that well for the
+subtleties of steering, so it has a habit of leaping into craters in
+tight spots.  Theoretically it's also supposed to avoid Martians if it
+sees them, but I'm not sure if that's actually working.
+
+Amazingly, it gives a vague semblence of working, so I figured I'd
+beat it into shape in time for the lightning deadline.
+
+
+Source files:
+
+raydec.erl: Implements the raycasting decider.  It's more than a
+            little hacked up at this point.
+
+simpledec.erl: Not used; implements a decider that just runs blindly
+               for home.
+
+steerage.erl: A simple routine that tries to steer towards a given direction.
+
+gis.erl: The server that stores all objects seen and raycasts through
+         them lives here.  It is full of O(n) awfulness, which I hope
+         to fix later, but it works.  There's also a little thing to
+         store the vehicle state and broadcast when it changes.
+
+comms.erl: What it sounds like.  At the bottom there's a process
+           (borrowed from an earlier project of mine) that takes the
+           TCP messages and reblocks them into "lines"; proceeding
+           upwards they're split into fields and then converted into
+           structured data, which are messaged onwards.  A convenience
+           routine for sending commands lives at the very top.
+
+disher.erl: Unexciting bit of glue that tosses different messages to
+            different places.
+  
+rover.erl: The top-level wad of glue that starts the processes and
+           wires them up and so on.  In a future revision, it will
+           monitor some of the more complicated processes and restart
+           them if they die (or perhaps if they fail to give timely
+           answer to a ping), for extra robustness.  But not yet.
+
