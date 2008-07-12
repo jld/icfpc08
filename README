@@ -3,12 +3,13 @@ random directions from the current location, see what if anything they
 hit, rate them based on that and which way home is, and try to steer
 towards the best one.  This doesn't account all that well for the
 subtleties of steering, so it has a habit of leaping into craters in
-tight spots.  Theoretically it's also supposed to avoid Martians if it
-sees them, but I'm not sure if that's actually working.
+tight spots (for which there are corresponding fudge factors
+elsewhere; it's all a bit of a mess, really).  There is also an
+attempt to avoid running Martians, and even engage evasive maneuvers
+if being followed by them; sometimes this works.
 
-Amazingly, it gives a vague semblance of working, so I figured I'd
+Amazingly, it all gives a vague semblance of working, so I figured I'd
 beat it into shape in time for the lightning deadline.
-
 
 Source files:
 

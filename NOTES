@@ -44,9 +44,18 @@ Stuff I really care about:
   not being a total idiot about martians, now that I know how to make them nasty
     (i.e., veering off the path, but also not diving into a crater)
     do the dot product distance thing?  (with the eventual direction for us)
-      but that means no more precomputed gradient.  Okay.
-      fakespd = (mvelo . uth) + (CIS DIR . uht)
-      util = fakespd / magth
+      but that means no more precomputed gradient.  Okay.  Wait, no.
+      fakespd = (mvelo . uth) + (myspd * CIS DIR . uht)
+      util = coeff * fakespd / magth
+      THUS: constant: coeff * (mvelo . uth) / magth; can ignore
+            gradient: coeff * myspd * uht / magth
+      Damnit, no.  The fact that it's a gradient is part of the problem.
+    ignore that.
+       grab nearest (or centroid) martian
+       unit gradient towards it
+       max with zero
+       cube it or something
+       
   robustification
 
 ========

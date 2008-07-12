@@ -28,16 +28,6 @@ run(Serv, Pcast, Pworld) ->
 	    Pcast ! {get_best, self()},
 	    receive
 		{best, Tang, _Tut} ->
-%% 		    Pworld ! {get_init, self()}, % XXX hack
-%% 		    receive 
-%% 			{init, Ini} -> ok
-%% 		    end,
-%% 		    Spd = Ini#init.max_speed * (math:tanh(Tut) + 3) / 4,
-%% 		    if Spd < (VS#vstate.vmob)#mob.speed ->
-%% 			    io:format("Too fast!~n"),
-%% 			    comms:scmd(Serv, b);
-%% 		       true -> comms:scmd(Serv, a)
-%% 		    end,
 		    steerage:turn(Serv, VS, Tang)
 	    end,
 	    run(Serv, Pcast, Pworld);
@@ -51,16 +41,17 @@ run(Serv, Pcast, Pworld) ->
 
 
 -define(COEFF_HOME, 1.0).
--define(POW_HOME, 0.0).
--define(COEFF_MARTIAN, -20.0).
--define(POW_MARTIAN, -1.0).
+-define(COEFF_MARTIAN, -4.0).
+-define(POW_MARTIAN, 4.0).
+-define(MARTIAN_REAR_CUTOFF, 0.866).
+-define(MARTIAN_REAR_SCALE, 0.7).
 
 -define(COEFF_HIT_H, 20.0).
 -define(COEFF_HIT_B, -20.0).
--define(COEFF_HIT_C, -40.0).
--define(COEFF_HIT_M, -80.0). % XXX irrelevant
+-define(COEFF_HIT_C, -60.0).
+-define(COEFF_HIT_M, -90.0). % XXX irrelevant
 
--record(raydec_cst, {vm, pworld, grad, span = 10.0 }).
+-record(raydec_cst, {vm, pworld, martians = [], span = 10.0 }).
 
 figure_span(#raydec_cst{ vm = VM, pworld = Pworld}) ->
     Pworld ! {cast, VM#mob.x, VM#mob.y, VM#mob.dir, self()},
@@ -83,9 +74,8 @@ caster(Pworld) ->
 	start_of_run -> ok
     end,
     receive
-	{vstate, #vstate { vmob = VM, others = Others }} ->
-	    caster(#raydec_cst{ vm = VM, pworld = Pworld,
-				grad = grad(VM, Others) }, VM#mob.dir)
+	{vstate, #vstate { vmob = VM }} ->
+	    caster(#raydec_cst{ vm = VM, pworld = Pworld }, VM#mob.dir)
     end.
 
 caster(ST, Bang) ->
@@ -94,7 +84,7 @@ caster(ST, Bang) ->
 caster(ST, Bang, But) ->
     receive
 	{vstate, #vstate { vmob = VM, others = Others }} ->
-	    NST = ST#raydec_cst{ vm = VM, grad = grad(VM, Others) }, % Ick.
+	    NST = ST#raydec_cst{ vm = VM, martians = Others },
 	    caster(NST#raydec_cst{ span = figure_span(NST) }, Bang);
 	{get_best, K} ->
 	    K ! {best, Bang, But},
@@ -102,43 +92,43 @@ caster(ST, Bang, But) ->
 	end_of_run ->
 	    caster(ST#raydec_cst.pworld)
     after 0 ->
-	    % XXX should randomize seed
 	    Rang = (ST#raydec_cst.vm)#mob.dir 
 		+ ST#raydec_cst.span * (2 * random:uniform() - 1),
 	    Rut = evaluate(ST, Rang),
 	    if Rut > But -> 
-%% 		    if abs(Rang-Bang) > 5 ->
-%% 			    io:format("~w (~w) > ~w (~w)~n",
-%% 				      [Rang, Rut, Bang, But]);
-%% 		       true -> ok
-%% 		    end,
 		    caster(ST, Rang, Rut);
 	       true ->
 		    caster(ST, Bang, But)
 	    end
     end.
+		       
 
-potential(HX, HY, OX, OY, Pw, Sc) ->
+gradto(HX, HY, OX, OY, VX, VY) ->
     DX = OX - HX,
     DY = OY - HY,
-    Rc = Sc * math:pow(HX*HX + HY*HY, (Pw-1)/2),
-    {Rc * DX, Rc * DY}.
-
-gplus({X1, Y1}, {X2, Y2}) -> {X1 + X2, Y1 + Y2}.
-
-grad(#mob{ x = HX, y = HY }, Others) ->
-    Ghome = potential(HX, HY, 0, 0, ?POW_HOME, ?COEFF_HOME),
-    lists:foldl(fun ({martian, #mob{ x = OX, y = OY }}, Acc) ->
-			gplus(potential(HX, HY, OX, OY, ?POW_MARTIAN, 
-					?COEFF_MARTIAN), Acc);
-		    (_, Acc) -> Acc end, Ghome, Others).
+    R = math:sqrt(DX*DX + DY*DY),
+    (DX * VX + DY * VY) / R.
 
 evaluate(#raydec_cst{ vm = #mob{ x = HX, y = HY },
-		      pworld = Pworld, grad = {GX, GY} }, Cang) ->
+		      pworld = Pworld, martians = Mar }, Cang) ->
     Pworld ! {cast, HX, HY, Cang, self()},
     Crad = Cang * math:pi() / 180,
     VX = math:cos(Crad), VY = math:sin(Crad),
-    Ugrad = GX * VX + GY * VY,
+    Uhome = ?COEFF_HOME * gradto(HX, HY, 0, 0, VX, VY),
+    Umars = lists:foldl
+	      (fun ({martian, #mob{ x = MX, y = MY }}, Acc) ->
+		       %% XXX maybe this should use the unit relative velocity?
+		       Gmars = gradto(HX, HY, MX, MY, VX, VY),
+		       Xmars = if Gmars > 0 -> Gmars;
+				  Gmars < -?MARTIAN_REAR_CUTOFF ->
+				       (-Gmars - ?MARTIAN_REAR_CUTOFF) /
+					   (1 - ?MARTIAN_REAR_CUTOFF) *
+					   ?MARTIAN_REAR_SCALE;
+				  true -> 0
+			       end,
+		       Acc + ?COEFF_MARTIAN * math:pow(Xmars, ?POW_MARTIAN);
+		   (_, Acc) -> Acc end,
+	       0, Mar),
     receive 
 	{hit, _D, {Dist, Obj}} -> lovely
     end,
@@ -160,4 +150,4 @@ evaluate(#raydec_cst{ vm = #mob{ x = HX, y = HY },
 	_ -> io:format("cast hit unknown object ~w~n", [Obj]),
 	     Uobj = 0
     end,
-    Ugrad + Uobj.
+    Uhome + Umars + Uobj.
