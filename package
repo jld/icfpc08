@@ -15,6 +15,6 @@ chmod +x stage/bin/run
 cp *.beam stage/lib/
 cp *.erl README stage/src/
 
-mv stage icfpc08
-tar zcvf submission.tgz icfpc08
-mv icfpc08 stage
+mv stage icfp08
+tar zcvf submission.tgz icfp08
+mv icfp08 stage
