@@ -27,7 +27,17 @@ run(Serv, Pcast, Pworld) ->
 	{vstate, VS} ->
 	    Pcast ! {get_best, self()},
 	    receive
-		{best, Tang} ->
+		{best, Tang, _Tut} ->
+%% 		    Pworld ! {get_init, self()}, % XXX hack
+%% 		    receive 
+%% 			{init, Ini} -> ok
+%% 		    end,
+%% 		    Spd = Ini#init.max_speed * (math:tanh(Tut) + 3) / 4,
+%% 		    if Spd < (VS#vstate.vmob)#mob.speed ->
+%% 			    io:format("Too fast!~n"),
+%% 			    comms:scmd(Serv, b);
+%% 		       true -> comms:scmd(Serv, a)
+%% 		    end,
 		    steerage:turn(Serv, VS, Tang)
 	    end,
 	    run(Serv, Pcast, Pworld);
@@ -54,7 +64,7 @@ run(Serv, Pcast, Pworld) ->
 
 figure_span(#raydec_cst{ vm = VM, pworld = Pworld}) ->
     Pworld ! {cast, VM#mob.x, VM#mob.y, VM#mob.dir, self()},
-    Pworld ! {get_init, self()},
+    Pworld ! {get_init, self()}, % XXX hack
     receive 
 	{hit, _D, {Dist, _Obj}} -> ok
     end,
@@ -62,7 +72,7 @@ figure_span(#raydec_cst{ vm = VM, pworld = Pworld}) ->
 	{init, Ini} -> ok
     end,
     TTL = Dist / (VM#mob.speed + 1.0e-12),
-    Spin = Ini#init.max_hard_turn * TTL / 2,
+    Spin = Ini#init.max_hard_turn * TTL / 3,
     io:format("Dist=~w TTL=~w Spin=~w~n", [Dist, TTL, Spin]),
     if Spin > 180 -> 180;
        true -> Spin
@@ -87,13 +97,14 @@ caster(ST, Bang, But) ->
 	    NST = ST#raydec_cst{ vm = VM, grad = grad(VM, Others) }, % Ick.
 	    caster(NST#raydec_cst{ span = figure_span(NST) }, Bang);
 	{get_best, K} ->
-	    K ! {best, Bang},
+	    K ! {best, Bang, But},
 	    caster(ST, Bang, But);
 	end_of_run ->
 	    caster(ST#raydec_cst.pworld)
     after 0 ->
 	    % XXX should randomize seed
-	    Rang = Bang + ST#raydec_cst.span * (2 * random:uniform() - 1),
+	    Rang = (ST#raydec_cst.vm)#mob.dir 
+		+ ST#raydec_cst.span * (2 * random:uniform() - 1),
 	    Rut = evaluate(ST, Rang),
 	    if Rut > But -> 
 %% 		    if abs(Rang-Bang) > 5 ->

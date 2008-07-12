@@ -36,7 +36,7 @@ world(Ini, Stuff) ->
 	{cast, X, Y, D, K} ->
 	    K ! {hit, D, cast(X, Y, D, walls(Ini) ++ Stuff)},
 	    world(Ini, Stuff);
-	{get_init, K} ->
+	{get_init, K} -> % XXX hack
 	    K ! {init, Ini},
 	    world(Ini, Stuff);
 	{dump, K} -> 
