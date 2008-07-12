@@ -1,5 +1,10 @@
 So it sort of pretends to work now.
 ACTION ITEMS:
+  Allow calling a function (init:stop/0) on eof.
+    and general packaging
+  Martian avoidance.
+    Hard to test.
+  Death feedback.
   The supervisor, sooner rather than later.
   avoid spinning forever around the center
     if we're not on beam to go home, then

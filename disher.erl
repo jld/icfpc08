@@ -1,4 +1,5 @@
 -module(disher).
+-include("stuff.hrl").
 -export([start/2]).
 
 start(Pvst, Pdec) ->
@@ -21,8 +22,11 @@ trial(Pvst, Pworld, Pdec) ->
 	    run(Pvst, Pworld, Pdec)
     end.
 
+nab_martians(Objs) ->
+    lists:filter(fun ({martian, _}) -> true; (_) -> false end, Objs).
+
 do_tele(Pvst, Pworld, {telemetry, VSt, Objs}) ->
-    Pvst ! {set_vstate, VSt},
+    Pvst ! {set_vstate, VSt#vstate{ others = nab_martians(Objs) }},
     lists:foreach(fun ({martian, _}) -> 'FIXME';
 		      (Obj) -> Pworld ! {seen, Obj} end, Objs).
 
@@ -38,4 +42,3 @@ run(Pvst, Pworld, Pdec) ->
 	    Pdec ! Other,
 	    run(Pvst, Pworld, Pdec)
     end.
-	    

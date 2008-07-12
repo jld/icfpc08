@@ -5,4 +5,4 @@
 -record(init, {x_limit, y_limit, time_limit,
 	       min_sensor, max_sensor,
 	       max_speed, max_turn, max_hard_turn}).
--record(vstate, { time, vctla, vctlt, vmob }).
+-record(vstate, { time, vctla, vctlt, vmob, others = [] }).
