@@ -1,13 +1,13 @@
 -module(rover).
--export([start/1, start/2, call_server/3]).
+-export([start/1, start/3, call_server/3]).
 -ifndef(DECIDER).
 -define(DECIDER, raydec).
 -endif.
 
-start([Host, SPort]) ->
-    start(Host, list_to_integer(SPort)).
+start([Host, SPort |Stuff]) ->
+    start(Host, list_to_integer(SPort), Stuff).
 
-start(Host, Port) ->
+start(Host, Port, Stuff) ->
     Pmspl = spawn(?MODULE, call_server, [Host, Port, self()]),
     Pmfmt = spawn(comms, msgfmt, []),
     Pvst = spawn(gis, vstate, []),
@@ -19,11 +19,16 @@ start(Host, Port) ->
     Pmspl ! {set_proc, Pmfmt},
     Pmfmt ! {set_proc, Pdsh},
     receive
-	% TODO: supervision
-	never -> ok
+	done -> 
+	    case Stuff of 
+		[M, F |A] -> apply(list_to_atom(M), list_to_atom(F), A);
+		_ -> whatever
+	    end
     end.
 
 call_server(Host, Port, K) ->
     {ok, S} = gen_tcp:connect(Host, Port, [binary, {nodelay, true}]),
     K ! { server_is, S },
-    comms:msgsplit().
+    comms:msgsplit(),
+    K ! done.
+
