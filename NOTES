@@ -7,8 +7,9 @@ ACTION ITEMS:
 
   Allow calling a function (init:stop/0) on eof.
     and general packaging
-  Death feedback.
   The supervisor, sooner rather than later.
+  Death feedback.
+    meaningless unless the stuff actually works
   avoid spinning forever around the center
     if we're not on beam to go home, then
     2 pi distance to origin / (360 / turn speed)

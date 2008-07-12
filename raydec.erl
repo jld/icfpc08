@@ -3,11 +3,12 @@
 -export([caster/1, start/2]).
 
 start(Serv, Pvst) ->
+    {A1, A2, A3} = now(),
+    random:seed(A1, A2, A3),
     receive
 	{set_world, Pworld} -> ok
     end,
-    Pcast = spawn(?MODULE, caster, [Pworld]),
-    erlang:monitor(process, Pcast),
+    Pcast = spawn_link(?MODULE, caster, [Pworld]),
     Pvst ! {observe, self()},
     Pvst ! {observe, Pcast}, 
     trial(Serv, Pcast, Pworld).
@@ -27,9 +28,7 @@ run(Serv, Pcast, Pworld) ->
 	    Pcast ! {get_best, self()},
 	    receive
 		{best, Tang} ->
-		    steerage:turn(Serv, VS, Tang);
-		{'DOWN', _, _, _, _} = Down ->
-		    io:format("DOOM DOOM DOOM ~w~n", [Down])
+		    steerage:turn(Serv, VS, Tang)
 	    end,
 	    run(Serv, Pcast, Pworld);
 	{end_of_run, _T, _S} ->
@@ -41,30 +40,33 @@ run(Serv, Pcast, Pworld) ->
     end.
 
 
--define(SPAN_INIT, 10.0).
--define(SPAN_MIN, 5.0).
--define(SPAN_MAX, 180.0).
--define(SPAN_SCALE_GOOD, 0.5).
--define(SPAN_SCALE_BAD, 2.0).
--define(SPAN_DISMAY, 0.7). % XXX should probably be adaptive instead of fixed
-
 -define(COEFF_HOME, 1.0).
 -define(POW_HOME, 0.0).
 -define(COEFF_MARTIAN, -20.0).
 -define(POW_MARTIAN, -1.0).
 
 -define(COEFF_HIT_H, 20.0).
--define(COEFF_HIT_B, -5.0).
--define(COEFF_HIT_C, -10.0).
--define(COEFF_HIT_M, -20.0). % XXX irrelevant
+-define(COEFF_HIT_B, -20.0).
+-define(COEFF_HIT_C, -40.0).
+-define(COEFF_HIT_M, -80.0). % XXX irrelevant
 
-min(X, Y) when X < Y -> X;
-min(_X, Y) -> Y.
+-record(raydec_cst, {vm, pworld, grad, span = 10.0 }).
 
-max(X, Y) when X > Y -> X;
-max(_X, Y) -> Y.
-
--record(raydec_cst, {vm, pworld, grad}).
+figure_span(#raydec_cst{ vm = VM, pworld = Pworld}) ->
+    Pworld ! {cast, VM#mob.x, VM#mob.y, VM#mob.dir, self()},
+    Pworld ! {get_init, self()},
+    receive 
+	{hit, _D, {Dist, _Obj}} -> ok
+    end,
+    receive
+	{init, Ini} -> ok
+    end,
+    TTL = Dist / (VM#mob.speed + 1.0e-12),
+    Spin = Ini#init.max_hard_turn * TTL / 2,
+    io:format("Dist=~w TTL=~w Spin=~w~n", [Dist, TTL, Spin]),
+    if Spin > 180 -> 180;
+       true -> Spin
+    end.
 
 caster(Pworld) ->
     receive
@@ -73,37 +75,35 @@ caster(Pworld) ->
     receive
 	{vstate, #vstate { vmob = VM, others = Others }} ->
 	    caster(#raydec_cst{ vm = VM, pworld = Pworld,
-				grad = grad(VM, Others) },
-		   VM#mob.dir, ?SPAN_INIT)
+				grad = grad(VM, Others) }, VM#mob.dir)
     end.
 
-caster(ST, Bang, Span) ->
-    caster(ST, Bang, evaluate(ST, Bang), Span).
+caster(ST, Bang) ->
+    caster(ST, Bang, evaluate(ST, Bang)).
 
-caster(ST, Bang, But, Span) ->
+caster(ST, Bang, But) ->
     receive
 	{vstate, #vstate { vmob = VM, others = Others }} ->
-	    if But > ?SPAN_DISMAY ->
-		    NSpan = max(Span * ?SPAN_SCALE_GOOD, ?SPAN_MIN);
-	       true ->
-		    NSpan = min(Span * ?SPAN_SCALE_BAD, ?SPAN_MAX)
-	    end,
-	    io:format("Span: ~w -> ~w~n", [Span, NSpan]),
-	    caster(ST#raydec_cst{ vm = VM, grad = grad(VM, Others) },
-		   Bang, NSpan);
+	    NST = ST#raydec_cst{ vm = VM, grad = grad(VM, Others) }, % Ick.
+	    caster(NST#raydec_cst{ span = figure_span(NST) }, Bang);
 	{get_best, K} ->
 	    K ! {best, Bang},
-	    caster(ST, Bang, But, Span);
+	    caster(ST, Bang, But);
 	end_of_run ->
 	    caster(ST#raydec_cst.pworld)
     after 0 ->
 	    % XXX should randomize seed
-	    Rang = Bang + Span * (2 * random:uniform() - 1),
+	    Rang = Bang + ST#raydec_cst.span * (2 * random:uniform() - 1),
 	    Rut = evaluate(ST, Rang),
 	    if Rut > But -> 
-		    caster(ST, Rang, Rut, Span);
+%% 		    if abs(Rang-Bang) > 5 ->
+%% 			    io:format("~w (~w) > ~w (~w)~n",
+%% 				      [Rang, Rut, Bang, But]);
+%% 		       true -> ok
+%% 		    end,
+		    caster(ST, Rang, Rut);
 	       true ->
-		    caster(ST, Bang, But, Span)
+		    caster(ST, Bang, But)
 	    end
     end.
 
