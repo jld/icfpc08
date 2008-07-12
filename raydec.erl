@@ -49,6 +49,10 @@ run(Serv, Pcast, Pworld) ->
 -define(SPAN_DISMAY, 0.7). % XXX should probably be adaptive instead of fixed
 
 -define(COEFF_HOME, 1.0).
+-define(POW_HOME, 0.0).
+-define(COEFF_MARTIAN, -20.0).
+-define(POW_MARTIAN, -1.0).
+
 -define(COEFF_HIT_H, 20.0).
 -define(COEFF_HIT_B, -5.0).
 -define(COEFF_HIT_C, -10.0).
@@ -60,15 +64,16 @@ min(_X, Y) -> Y.
 max(X, Y) when X > Y -> X;
 max(_X, Y) -> Y.
 
--record(raydec_cst, {vm, pworld, others = []}).
+-record(raydec_cst, {vm, pworld, grad}).
 
 caster(Pworld) ->
     receive
 	start_of_run -> ok
     end,
     receive
-	{vstate, #vstate { vmob = VM }} ->
-	    caster(#raydec_cst{ vm = VM, pworld = Pworld },
+	{vstate, #vstate { vmob = VM, others = Others }} ->
+	    caster(#raydec_cst{ vm = VM, pworld = Pworld,
+				grad = grad(VM, Others) },
 		   VM#mob.dir, ?SPAN_INIT)
     end.
 
@@ -84,7 +89,8 @@ caster(ST, Bang, But, Span) ->
 		    NSpan = min(Span * ?SPAN_SCALE_BAD, ?SPAN_MAX)
 	    end,
 	    io:format("Span: ~w -> ~w~n", [Span, NSpan]),
-	    caster(ST#raydec_cst{ vm = VM, others = Others }, Bang, NSpan);
+	    caster(ST#raydec_cst{ vm = VM, grad = grad(VM, Others) },
+		   Bang, NSpan);
 	{get_best, K} ->
 	    K ! {best, Bang},
 	    caster(ST, Bang, But, Span);
@@ -100,14 +106,28 @@ caster(ST, Bang, But, Span) ->
 		    caster(ST, Bang, But, Span)
 	    end
     end.
-    
+
+potential(HX, HY, OX, OY, Pw, Sc) ->
+    DX = OX - HX,
+    DY = OY - HY,
+    Rc = Sc * math:pow(HX*HX + HY*HY, (Pw-1)/2),
+    {Rc * DX, Rc * DY}.
+
+gplus({X1, Y1}, {X2, Y2}) -> {X1 + X2, Y1 + Y2}.
+
+grad(#mob{ x = HX, y = HY }, Others) ->
+    Ghome = potential(HX, HY, 0, 0, ?POW_HOME, ?COEFF_HOME),
+    lists:foldl(fun ({martian, #mob{ x = OX, y = OY }}, Acc) ->
+			gplus(potential(HX, HY, OX, OY, ?POW_MARTIAN, 
+					?COEFF_MARTIAN), Acc);
+		    (_, Acc) -> Acc end, Ghome, Others).
+
 evaluate(#raydec_cst{ vm = #mob{ x = HX, y = HY },
-		      pworld = Pworld, others = Others }, Cang) ->
+		      pworld = Pworld, grad = {GX, GY} }, Cang) ->
     Pworld ! {cast, HX, HY, Cang, self()},
-    HR = math:sqrt(HX*HX + HY*HY),
     Crad = Cang * math:pi() / 180,
-    Uhome = ?COEFF_HOME * -(HX/HR * math:cos(Crad) + HY/HR * math:sin(Crad)),
-    % TODO: martians, now that I have them.
+    VX = math:cos(Crad), VY = math:sin(Crad),
+    Ugrad = GX * VX + GY * VY,
     receive 
 	{hit, _D, {Dist, Obj}} -> lovely
     end,
@@ -129,4 +149,4 @@ evaluate(#raydec_cst{ vm = #mob{ x = HX, y = HY },
 	_ -> io:format("cast hit unknown object ~w~n", [Obj]),
 	     Uobj = 0
     end,
-    Uhome + Uobj.
+    Ugrad + Uobj.

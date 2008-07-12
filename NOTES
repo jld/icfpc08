@@ -1,15 +1,18 @@
 So it sort of pretends to work now.
 ACTION ITEMS:
+  The steering is a bit overly daredevilish.
+  The ray evaluator kind of sucks.
+    Or maybe this span thing is just wrong.
+    Maybe roll for span on each cast?
+
   Allow calling a function (init:stop/0) on eof.
     and general packaging
-  Martian avoidance.
-    Hard to test.
   Death feedback.
   The supervisor, sooner rather than later.
   avoid spinning forever around the center
     if we're not on beam to go home, then
-    2 pi distance to origin / time for 360 at full turn
-    if faster then that, then lay off the gas, and optionally brake
+    2 pi distance to origin / (360 / turn speed)
+    if faster than that, then lay off the gas, and optionally brake
     will ideally want to cadge together a test map (how?)
   [DONE, +/-] the ridiculous stochastic raycasting, as described below
   [DONE, +/-] concern about missing small craters (or boulders?)
