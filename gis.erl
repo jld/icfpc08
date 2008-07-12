@@ -17,7 +17,7 @@ vstate(VS, Obs) ->
 	    vstate(VS, lists:delete(K, Obs));
 	{set_vstate, NVS} ->
 	    lists:foreach(fun (K) -> K ! {vstate, NVS} end, Obs),
-	    vstate(VS, Obs);
+	    vstate(NVS, Obs);
 	Other ->
 	    io:format("vstate: unreognized message ~w~n", [Other])
     end.

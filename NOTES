@@ -1,3 +1,35 @@
+So it sort of pretends to work now.
+ACTION ITEMS:
+  the ridiculous stochastic raycasting, as described below
+  fix the wobbling
+    have target rotation state -- neutral within N deg, soft within 2N
+    (split the vehicle ctl)
+    separate steering module
+  avoid spinning forever around the center
+    if we're not on beam to go home, then
+    2 pi distance to origin / time for 360 at full turn
+    if faster then that, then lay off the gas, and optionally brake
+    will ideally want to cadge together a test map (how?)
+  concern about missing small craters (or boulders?)
+    can hard-code a fudge factor in the gis
+    XXX: should add own radius to boulders (and m), but not craters
+  The supervisor, sooner rather than later.
+
+Raycasting summary:
+  have best ray, random span
+  generate random ray(s?)
+    maybe N and save the best
+  test them
+    utility: going home (constant mag), not hitting (inverse distance),
+             visible martians (inverse distance),
+             bonus for straight shot home (inverse?)
+    if better, replace and scale down span (with minimum!)
+    if worse, scale up span
+  THOUGHTS:
+    raycast to martians; if crater (nearer than m), then don't worry so?
+
+========
+
 Processes:
   tcp -> binary list, simple msg -> tcp
   binary list -> structured message

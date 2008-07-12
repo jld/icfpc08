@@ -28,7 +28,7 @@ list_to_num(S) ->
     end.
 
 bton(B) -> list_to_num(binary_to_list(B)).
-btoa(B) -> list_to_atom(binary_to_list(B)).
+%btoa(B) -> list_to_atom(binary_to_list(B)).
 
 to_struct([<<"I">>,DX,DY,TL,MinSen,MaxSen,MaxSpd,MaxTurn,MaxHT]) ->
     {initialize, #init{
@@ -37,9 +37,9 @@ to_struct([<<"I">>,DX,DY,TL,MinSen,MaxSen,MaxSpd,MaxTurn,MaxHT]) ->
        max_speed = bton(MaxSpd),
        max_turn = bton(MaxTurn), max_hard_turn = bton(MaxHT) }};
 
-to_struct([<<"T">>,T,VC,VX,VY,VD,VS |Objs]) ->
+to_struct([<<"T">>,T,<<VCA,VCT>>,VX,VY,VD,VS |Objs]) ->
     {telemetry,
-     #vstate { time = bton(T), vctl = btoa(VC),
+     #vstate { time = bton(T), vctla = in_accel(VCA), vctlt = in_turn(VCT),
 	       vmob = #mob{ x = bton(VX), y = bton(VY),
 			    dir = bton(VD), speed = bton(VS) }},
      objs_to_struct(Objs)};
@@ -64,6 +64,15 @@ objs_to_struct_st(Type, [X,Y,R |Objs]) ->
 objs_to_struct_dy(Type, R, [X,Y,D,S |Objs]) ->
     [{Type, #mob{ x = bton(X), y = bton(Y), dir = bton(D), speed = bton(S),
 		  r = R }} |objs_to_struct(Objs)].
+
+in_accel($a) -> 1;
+in_accel($-) -> 0;
+in_accel($b) -> -1.
+in_turn($L) -> 2;
+in_turn($l) -> 1;
+in_turn($-) -> 0;
+in_turn($r) -> -1;
+in_turn($R) -> -2.
 
 
 to_fields(<<>>) -> [];

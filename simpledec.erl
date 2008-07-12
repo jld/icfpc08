@@ -17,19 +17,11 @@ trial(Serv, Pworld) ->
 	    run(Serv, Pworld)
     end.
 
-fixang(D) when D < -180 -> fixang(D + 360);
-fixang(D) when D >= 180 -> fixang(D - 360);
-fixang(D) -> D.
-
 run(Serv, Pworld) ->
     receive
-	{vstate, #vstate{ vmob = VM }} ->
-	    Dfwd = VM#mob.dir,
+	{vstate, #vstate{ vmob = VM } = VS} ->
 	    Dhome = math:atan2(-VM#mob.y, -VM#mob.x) * 180 / math:pi(),
-	    Ddel = fixang(Dhome - Dfwd),
-	    if Ddel > 0 -> comms:scmd(Serv, l);
-	       true ->     comms:scmd(Serv, r)
-	    end,
+	    steerage:turn(Serv, VS, Dhome),
 	    run(Serv, Pworld);
 	{end_of_run, _T, _S} ->
 	    trial(Serv, Pworld);
