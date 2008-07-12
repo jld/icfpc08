@@ -1,3 +1,56 @@
+So it actually tries to avoid stuff now, but doesn't always work.
+
+Issue 1: when about to hit a wall regardless of turning, should brake
+  a more nuanced ray evaluator can take care of that
+    oh really?  How is a wall defined?
+  should still be able to get away with rays vs arcs here
+    or maybe not?
+
+Issue 2: steering is a bit screwy
+  there is no excuse for some of the diving into craters I've seen
+
+Maybe I should do an actual fake-physics trace (maybe less speed stuff)
+  in C, on a quadtree
+  will need to feed it guessed max-rot-accel as well as known params
+    and also guessed current-rot-speed
+  so what?
+  trace ahead a ways for each turn state
+    ...then periodically branch off, trace back to straight, and cast?
+    ...or just trace and that's it?
+      not a very good use of CPU
+  or the raycasting can be saved
+    be given a heading
+    steer towards it
+      which will make steerage live here, which isn't so bad
+        when to stop steering?
+          abs(crs) >= crs**2/(2*mra)
+      pass back the first desired turn state
+    see what gets hit
+  what of the martians?
+    fake speed = its real velocity `dot` unit from there to Here
+               + our real velocity `dot` unit from Here to there
+    diminish original actual distance by that * dt; die on 0
+      maybe only every N steps if that's an issue
+  and what of home?
+    ugh.  cheap gradient term, as before?
+
+This still doesn't get real pathfinding; I'm not sure I care.
+
+========
+
+Ignore the next (chronologically previous) section for now.
+
+Stuff I really care about:
+  not being a total idiot about martians, now that I know how to make them nasty
+    (i.e., veering off the path, but also not diving into a crater)
+    do the dot product distance thing?  (with the eventual direction for us)
+      but that means no more precomputed gradient.  Okay.
+      fakespd = (mvelo . uth) + (CIS DIR . uht)
+      util = fakespd / magth
+  robustification
+
+========
+
 So it sort of pretends to work now.
 ACTION ITEMS:
   The ray evaluator may suck

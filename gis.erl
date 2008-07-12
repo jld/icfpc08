@@ -3,7 +3,8 @@
 -export([vstate/0, world/1, world/2, 
 	 walls/1, cast/4, cast1/5]).
 
--define(FUDGE, 0.6).
+-define(FUDGE_M, 0.05).
+-define(FUDGE_B, 0.60).
 
 vstate() -> receive {set_vstate, VS} -> vstate(VS, []) end.
 
@@ -76,7 +77,7 @@ cast1(X, _Y, DX, _DY, {vert, OX} = Obj) ->
     end;
 
 cast1(X, Y, DX, DY, {_Type, #mob{ x = OX, y = OY, r = RR }} = Obj) ->
-    R = RR + ?FUDGE,
+    R = RR * (1 + ?FUDGE_M) + ?FUDGE_B,
     FooX = X - OX,
     FooY = Y - OY,
     FooR2 = FooX * FooX + FooY * FooY,
