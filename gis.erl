@@ -52,10 +52,6 @@ world(Ini, VM, Stuff) ->
 	    K ! {hit, TDir, Type, steerage:steer(Dir, TDir), Dist},
 	    world(Ini, VM, Stuff);
 
-	{get_init, K} -> % XXX hack
-	    K ! {init, Ini},
-	    world(Ini, VM, Stuff);
-
 	upgrade ->
 	    ?MODULE:world(Ini, VM, Stuff);
 	Other ->

@@ -4,7 +4,7 @@
 
 start(Serv, Pvst) ->
     receive
-	{set_world, Pworld} -> ok
+	{set_world, Pworld, _Ini} -> ok
     end,
     Pvst ! {observe, self()},
     trial(Serv, Pworld).

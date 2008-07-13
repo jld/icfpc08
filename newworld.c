@@ -17,7 +17,7 @@
 /* Constants!  Conveniently at the top! */
 #define SIM_STEP 0.01
 #define SIM_TELE 0.1
-#define ARC_LIMIT (3 * param.max_sense)
+#define ARC_LIMIT (6 * param.max_sense)
 #define FUDGE_B 0.6
 #define FUDGE_C 0.1
 
@@ -34,23 +34,29 @@ static struct msg_init param;
 
 
 /* Vehicle state, explicit and inferred. */
-static int goingp;
 static double vtime, here_x, here_y, dir, speed;
-static double rot_speed, max_rot_accel = 1e-3; /* nonzero-but-low dummy */
+static double rot_speed, max_rot_accel;
+
+#define NaN (0.0/0.0)
+
+static void
+reset_vstate(void)
+{
+	vtime = speed = rot_speed = here_x = here_y = NaN;
+	max_rot_accel = 1e-3;
+}
 
 static void
 update_vstate(double new_time, double new_x, double new_y,
     double new_dir /* RADIANS */, double new_speed)
 {
-	double dt, new_rot_speed, new_rot_accel;
-	
-	if (goingp) {
-		dt = new_time - vtime;
-		if (dt <= 0) {
-			fprintf(stderr, "Nonpositive dt: %g (at %g)\r\n",
-			    dt, new_time);
-			return;
-		}
+	double dt = NaN, new_rot_speed = NaN, new_rot_accel = NaN;
+
+	dt = new_time - vtime;
+	if (dt <= 0 && !isnan(dt)) {
+		fprintf(stderr, "Nonpositive dt: %g (at %g)\r\n",
+		    dt, new_time);
+		return;
 	}
 
 	vtime = new_time;
@@ -58,29 +64,34 @@ update_vstate(double new_time, double new_x, double new_y,
 	here_y = new_y;
 	speed = new_speed;
 
-	if (goingp) {
-		new_rot_speed = dirdiff(new_dir, dir) / dt;
-		new_rot_accel = fabs((new_rot_speed - rot_speed) / dt);
-	
-		rot_speed = new_rot_speed;
-		if (new_rot_accel > max_rot_accel)
-			max_rot_accel = new_rot_accel;
-	}
-	goingp = 1;
-}
+	new_rot_speed = dirdiff(new_dir, dir) / dt;
+	new_rot_accel = fabs((new_rot_speed - rot_speed) / dt);
 
+	/* FIXME this is wrong; a running average would be good. */
+	if (new_rot_accel > max_rot_accel) {
+		max_rot_accel = new_rot_accel;
+	}
+	rot_speed = new_rot_speed;
+	dir = new_dir;
+
+	fprintf(stderr, "dir = %g   rs = %g   nra = %g   mra = %g\r\n",
+	    dir, rot_speed, new_rot_accel, max_rot_accel);
+}
 
 
 /* Steerage revised. */
 static int
-steer(double dir, double tdir) 
+steer(double dir, double rs, double dtarg) 
 {
-	double spillage;
+	double stoptime;
+	double dhalt;
 	double ddiff;
 	
-	ddiff = dirdiff(tdir, dir);
-	spillage = (rot_speed * rot_speed) / (2 * max_rot_accel);
-	if (fabs(ddiff) < spillage)
+	stoptime = fabs(rot_speed) / max_rot_accel;
+	dhalt = dir + stoptime * rs / 2;
+	ddiff = dirdiff(dtarg, dhalt);
+
+	if (fabs(ddiff) < 2 * max_rot_accel * SIM_TELE * SIM_TELE)
 		return 0;
 
 	return ddiff < 0 ? -2 : 2;
@@ -128,7 +139,7 @@ add_object(double x, double y, double rr, char type)
 		    /* No, I don't need epsilons, actually.  I hope. */
 		    i->r == r && i->type == type)
 			return;
-	
+
 	i = malloc(sizeof(struct object));
 	i->x = x;
 	i->y = y;
@@ -239,12 +250,14 @@ cast_arc(double tdir, int8_t *pfirst_turn, double *podometer)
 	l = ARC_LIMIT / param.max_speed / SIM_TELE;
 	
 	for (i = 0; i < l; ++i) {
-		turn = steer(ss.dir, tdir);
+		turn = steer(ss.dir, ss.rs, tdir);
 		if (!turnedp) {
 			turnedp = 1;
 			*pfirst_turn = turn;
 		}
 		hit = sim_run(&ss, SIM_TELE, turn_to_rot_speed(turn));
+		if (hit)
+			break;
 	}
 	*podometer = ss.odometer;
 
@@ -268,6 +281,7 @@ int main(int argc, char** argv)
 	uint32_t msglen;
 	struct msg* gmsg;
 
+	reset_vstate();
 	for (;;) {
 		msglen = 0xDEADBEEF;
 		if (fread(&msglen, 4, 1, stdin) != 1) {
@@ -290,7 +304,7 @@ int main(int argc, char** argv)
 		} break;
 		case MSG_WHERE: {
 			struct msg_where *msg = (void*)gmsg;
-			update_vstate(msg->time, msg->x, msg->y,
+			update_vstate(msg->time / 1000, msg->x, msg->y,
 			    msg->dir * M_PI / 180, msg->speed);
 		} break;
 		case MSG_SEEN: {
@@ -306,8 +320,10 @@ int main(int argc, char** argv)
 			struct object* hit;
 
 			++cast_ctr;
-			hit = cast_arc(msg->dir,
+			hit = cast_arc(msg->dir * M_PI / 180,
 			    &resp.first_turn, &resp.odometer);
+			if (isnan(resp.odometer))
+				resp.odometer = 0.0;
 			resp.obj_type = hit ? hit->type : 0;
 			resp.msg_type = MSG_HIT;
 			memset(&resp.pad, 0, sizeof(resp.pad));
@@ -320,6 +336,18 @@ int main(int argc, char** argv)
 				return 1;
 			}
 		} break;
+		case MSG_RSET: {
+			reset_vstate();
+		} break;
+		case MSG_BOULDER: {
+			struct msg_boulder *msg = (void*)gmsg;
+
+			dir = NaN;
+			if ((msg->time / 1000) < vtime) {
+				rot_speed = max_rot_accel = NaN;
+			}
+		} break;			
+
 		default: fprintf(stderr, "newworld.c: bad message type %d\r\n", 
 		    gmsg->msg_type);
 		}

@@ -20,16 +20,21 @@ world(Ini, Pvst) ->
 -define(MSG_MARTIANS, 3).
 -define(MSG_CAST, 4).
 -define(MSG_HIT, 5).
+-define(MSG_RSET, 6).
+-define(MSG_BOULDER, 7).
 
 -define(pc(P,D), port_command(P,D)).
 
 encode_mob(#mob{ x = X, y = Y, dir = D, speed = S }) ->
-    <<X/float-native, Y/float-native, D/float-native, S/float-native>>.
+    <<X/float-native, Y/float-native, D/float-native, S/float-native>>;
+encode_mob({_Type, #mob{ } = Mob}) ->
+    encode_mob(Mob).
 
 unabbrev_type($b) -> boulder;
 unabbrev_type($c) -> crater;
 unabbrev_type($h) -> home;
 unabbrev_type($m) -> martian;
+unabbrev_type(0) -> false;
 unabbrev_type(C) -> list_to_atom([C |"..."]).
 
 send_init(P, I) ->
@@ -63,11 +68,18 @@ relay(P) ->
 	    ?pc(P, <<?MSG_CAST, 0:56,
 		    D/float-native>>),
 	    receive
-		{P, {data, <<?MSG_HIT, Type, Turn, _Pad:40,
+		{P, {data, <<?MSG_HIT, Type, Turn/signed, _Pad:40,
 			    Dist/float-native>>}} ->
 		    K ! {hit, D, unabbrev_type(Type), Turn, Dist}
 	    % Should there be a timeout here, just in case?
 	    end,
+	    relay(P);
+	rset ->
+	    ?pc(P, <<?MSG_RSET, 0:56>>),
+	    relay(P);
+	{boulder_hit, T} ->
+	    ?pc(P, <<?MSG_BOULDER, 0:56,
+		    T/float-native>>),
 	    relay(P);
 
 	upgrade ->

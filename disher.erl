@@ -1,12 +1,15 @@
 -module(disher).
 -include("stuff.hrl").
 -export([start/2]).
+-ifndef(WORLD).
+-define(WORLD,newworld).
+-endif.
 
 start(Pvst, Pdec) ->
     receive
 	{initialize, Ini} -> 
-	    Pworld = spawn(gis, world, [Ini, Pvst]),
-	    Pdec ! { set_world, Pworld },
+	    Pworld = spawn(?WORLD, world, [Ini, Pvst]),
+	    Pdec ! { set_world, Pworld, Ini },
 	    trial(Pvst, Pworld, Pdec)
     end.
 
@@ -38,7 +41,12 @@ run(Pvst, Pworld, Pdec) ->
 	    run(Pvst, Pworld, Pdec);
 	{end_of_run, _T, _S} = End ->
 	    Pdec ! End,
+	    Pworld ! rset,
 	    trial(Pvst, Pworld, Pdec);
+	{boulder_hit, _T} = BH ->
+	    Pworld ! BH,
+	    Pdec ! BH,
+	    run(Pvst, Pworld, Pdec);
 	Other ->
 	    Pdec ! Other,
 	    run(Pvst, Pworld, Pdec)

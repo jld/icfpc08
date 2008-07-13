@@ -1,14 +1,14 @@
 -module(raydec).
 -include("stuff.hrl").
--export([caster/1, start/2]).
+-export([caster_0/2, start/2]).
 
 start(Serv, Pvst) ->
     {A1, A2, A3} = now(),
     random:seed(A1, A2, A3),
     receive
-	{set_world, Pworld} -> ok
+	{set_world, Pworld, Ini} -> ok
     end,
-    Pcast = spawn_link(?MODULE, caster, [Pworld]),
+    Pcast = spawn_link(?MODULE, caster_0, [Pworld, Ini]),
     Pvst ! {observe, self()},
     Pvst ! {observe, Pcast}, 
     trial(Serv, Pcast, Pworld).
@@ -27,8 +27,10 @@ run(Serv, Pcast, Pworld) ->
 	{vstate, VS} ->
 	    Pcast ! {get_best, self()},
 	    receive
-		{best, Tang, _Tut} ->
-		    steerage:turn(Serv, VS, Tang)
+		{best, _Tang, _Tut, Ttu} = Be ->
+		    io:format("Best: ~w -> ~w~n",
+			      [(VS#vstate.vmob)#mob.dir, Be]),
+		    steerage:do_turn(Serv, VS, Ttu)
 	    end,
 	    run(Serv, Pcast, Pworld);
 	{end_of_run, _T, _S} ->
@@ -41,7 +43,7 @@ run(Serv, Pcast, Pworld) ->
 
 
 -define(COEFF_HOME, 1.0).
--define(COEFF_MARTIAN, -4.0).
+-define(COEFF_MARTIAN, 0.0). % -4.0
 -define(POW_MARTIAN, 4.0).
 -define(MARTIAN_REAR_CUTOFF, 0.866).
 -define(MARTIAN_REAR_SCALE, 0.7).
@@ -51,53 +53,60 @@ run(Serv, Pcast, Pworld) ->
 -define(COEFF_HIT_C, -60.0).
 -define(COEFF_HIT_M, -90.0). % XXX irrelevant
 
--record(raydec_cst, {vm, pworld, martians = [], span = 10.0 }).
+-record(raydec_cst, {vm, pworld, init,
+		     martians = [], span = 10.0 }).
 
-figure_span(#raydec_cst{ vm = VM, pworld = Pworld}) ->
+-ifdef(OBS_FIGURE_SPAN).
+figure_span(#raydec_cst{ vm = VM, pworld = Pworld, init = Ini}) ->
     Pworld ! {cast, VM#mob.dir, self()},
-    Pworld ! {get_init, self()}, % XXX hack
     receive
 	{hit, _D, _Type, _Turn, Dist} -> ok
-    end,
-    receive
-	{init, Ini} -> ok
     end,
     TTL = Dist / (VM#mob.speed + 1.0e-12),
     Spin = Ini#init.max_hard_turn * TTL / 3,
     if Spin > 180 -> 180;
        true -> Spin
     end.
+-else.
+figure_span(_) -> 180.
+-endif.
 
-caster(Pworld) ->
+caster_0(Pworld, Ini) ->
     receive
 	start_of_run -> ok
     end,
     receive
 	{vstate, #vstate { vmob = VM }} ->
-	    caster(#raydec_cst{ vm = VM, pworld = Pworld }, VM#mob.dir)
+	    caster(#raydec_cst{ vm = VM, pworld = Pworld, init = Ini }, 
+		   VM#mob.dir)
     end.
 
 caster(ST, Bang) ->
-    caster(ST, Bang, evaluate(ST, Bang)).
+    {But, Btu, _} = evaluate(ST, Bang),
+    caster(ST, Bang, But, Btu).
 
-caster(ST, Bang, But) ->
+caster(ST, Bang, But, Btu) ->
     receive
 	{vstate, #vstate { vmob = VM, others = Others }} ->
 	    NST = ST#raydec_cst{ vm = VM, martians = Others },
 	    caster(NST#raydec_cst{ span = figure_span(NST) }, Bang);
 	{get_best, K} ->
-	    K ! {best, Bang, But},
-	    caster(ST, Bang, But);
+	    K ! {best, Bang, But, Btu},
+	    caster(ST, Bang, But, Btu);
 	end_of_run ->
-	    caster(ST#raydec_cst.pworld)
+	    caster_0(ST#raydec_cst.pworld, ST#raydec_cst.init)
     after 0 ->
-	    Rang = (ST#raydec_cst.vm)#mob.dir 
-		+ ST#raydec_cst.span * (2 * random:uniform() - 1),
-	    Rut = evaluate(ST, Rang),
+	    Rang = (ST#raydec_cst.vm)#mob.dir
+		+ ST#raydec_cst.span * math:pow(2 * random:uniform() - 1, 3),
+	    {Rut, Rtu, Rty} = evaluate(ST, Rang),
 	    if Rut > But -> 
-		    caster(ST, Rang, Rut);
+		    if Rty == crater ->
+			    io:format("O NOES!~n");
+		       true -> ok
+		    end,
+		    caster(ST, Rang, Rut, Rtu);
 	       true ->
-		    caster(ST, Bang, But)
+		    caster(ST, Bang, But, Btu)
 	    end
     end.
 
@@ -129,7 +138,7 @@ evaluate(#raydec_cst{ vm = #mob{ x = HX, y = HY },
 		   (_, Acc) -> Acc end,
 	       0, Mar),
     receive
-	{hit, _D, Type, _Turn, Dist} -> lovely
+	{hit, _D, Type, Turn, Dist} -> lovely
     end,
     case Type of 
 	boulder -> Co = ?COEFF_HIT_B;
@@ -139,5 +148,7 @@ evaluate(#raydec_cst{ vm = #mob{ x = HX, y = HY },
 	_ -> %io:format("cast hit unknown type ~w~n", [Type]),
 	    Co = 0
     end,
-    Uobj = Co / Dist,
-    Uhome + Umars + Uobj.
+    Uobj = if Dist =< 1.0e-6 -> Co * 1.0e+6 ;
+	      true -> Co / Dist
+	   end,
+    {Uhome + Umars + Uobj, Turn, Type}.

@@ -6,7 +6,9 @@ enum msg_type {
 	MSG_SEEN = 2,
 	MSG_MARTIANS = 3,
 	MSG_CAST = 4,
-	MSG_HIT = 5
+	MSG_HIT = 5,
+	MSG_RSET = 6,
+	MSG_BOULDER = 7
 };
 
 struct msg {
@@ -50,3 +52,7 @@ struct msg_hit {
 	double odometer;
 };
 
+struct msg_boulder {
+	uint8_t msg_type, pad[7];
+	double time;
+};

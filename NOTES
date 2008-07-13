@@ -1,3 +1,21 @@
+Okay, the bloody arc-caster is more or less pretending to work.
+
+Stuff to do:
+  preload with the home
+  fix up the mra computation
+  adjust the ray-cast stopping conditions
+    odometer limit (in addition to time limit)
+    hitting-the-wall limit
+    (benchmark!)
+  brake application heuristic
+    save type of ray hits
+    have doom limits for B and C (but perhaps not M)
+  new martian handling, as discussed in lower sections
+  consider a quadtree or even just static binning
+    can benchmark the sizes for the latter
+
+=======
+
 The lightning round is done; prepare for the new world.
 
 Something has to watch the rotations and stuff; maybe it'll be the world server
