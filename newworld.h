@@ -14,13 +14,13 @@ struct msg {
 };
 
 struct msg_init {
-	unt8_t msg_type, pad[7];
+	uint8_t msg_type, pad[7];
 	double x_lim, y_lim, min_sense, max_sense,
 		max_speed, max_turn, max_hard_turn;
 };
 
 struct msg_where {
-	unt8_t msg_type, pad[7];
+	uint8_t msg_type, pad[7];
 	double time, x, y, dir, speed;
 };
 

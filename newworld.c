@@ -1,8 +1,14 @@
+#include <inttypes.h>
 #include <math.h>
+#ifndef M_PI
+# define M_PI           3.14159265358979323846  /* pi */
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+
 /* for ntohl/htonl: */
 #include <arpa/inet.h> 
 
@@ -14,7 +20,6 @@
 #define ARC_LIMIT (3 * param.max_sense)
 #define FUDGE_B 0.6
 #define FUDGE_C 0.1
-
 
 /* Utilities go here. */
 static double
@@ -73,7 +78,7 @@ steer(double dir, double tdir)
 	double spillage;
 	double ddiff;
 	
-	ddiff = dir_diff(tdir, dir);
+	ddiff = dirdiff(tdir, dir);
 	spillage = (rot_speed * rot_speed) / (2 * max_rot_accel);
 	if (fabs(ddiff) < spillage)
 		return 0;
@@ -180,7 +185,7 @@ sim_start(struct sim_state *ss)
 	ss->dir = dir;
 	ss->rs = rot_speed;
 	ss->odometer = 0;
-	obj_cursor_init(&ss->curs);
+	obj_cursor_init(&ss->curs, ss->x, ss->y);
 }
 
 static struct object*
@@ -190,7 +195,7 @@ sim_run(struct sim_state *ss, double dt, double trs)
 	double nrs;
 
 	for (; dt >= SIM_STEP/2; dt -= SIM_STEP) {
-		hit = obj_cursor_test(&ss->cu, ss->x, ss->y);
+		hit = obj_cursor_test(&ss->curs, ss->x, ss->y);
 		if (hit)
 			return hit;
 		
@@ -200,6 +205,8 @@ sim_run(struct sim_state *ss, double dt, double trs)
 		 */
 		ss->x += SIM_STEP * speed * cos(ss->dir);
 		ss->y += SIM_STEP * speed * sin(ss->dir);
+		obj_cursor_move(&ss->curs, ss->x, ss->y);
+
 		ss->odometer += SIM_STEP * speed;
 		ss->dir += SIM_STEP * ss->rs;
 		
@@ -292,10 +299,10 @@ int main(int argc, char** argv)
 
 			++cast_ctr;
 			hit = cast_arc(msg->dir,
-			    &resp->first_turn, &resp->odometer);
-			resp->obj_type = hit->type;
-			resp->msg_type = MSG_HIT;
-			memset(&resp->pad, 0, sizeof(resp->pad));
+			    &resp.first_turn, &resp.odometer);
+			resp.obj_type = hit->type;
+			resp.msg_type = MSG_HIT;
+			memset(&resp.pad, 0, sizeof(resp.pad));
 			
 			msglen = htonl(sizeof(resp));
 			fwrite(&msglen, 4, 1, stdout);
