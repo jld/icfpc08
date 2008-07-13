@@ -15,15 +15,14 @@
 #include "newworld.h"
 
 /* Constants!  Conveniently at the top! */
-#define SIM_STEP 0.01
+#define SIM_STEP 0.001
 #define SIM_TELE 0.1
 #define ARC_LIMIT (6 * param.max_sense)
 #define FUDGE_B 0.6
 #define FUDGE_C 0.1
 #define FUDGE_CX 0.00
 #define MRA_EPS 1e-3
-#define MRA_IGN 3e-3
-#define STEER_MAGIC 1.2
+#define STEER_MAGIC 2.0
 
 #define NaN (0.0/0.0)
 
