@@ -1,3 +1,18 @@
+I hate the max rot accel thing.
+
+f(1) = 2, f(2) = 5, f(3) = 10
+f(x) = (x-1) g(x) + 2
+  g(x) = (f(x) - 2) / (x - 1)
+
+g(2) = 3
+g(3) = 4
+g(x) = x + 1
+
+f(x) = x^2 + x - x - 1 + 2
+     = x^2 + 1
+
+=======
+
 Okay, the bloody arc-caster is more or less pretending to work.
 
 Stuff to do:

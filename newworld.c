@@ -23,7 +23,9 @@
 #define FUDGE_CX 0.00
 #define MRA_EPS 1e-3
 #define MRA_IGN 3e-3
-#define STEER_MAGIC 1.2 /* Grrr. */
+#define STEER_MAGIC 1.2
+
+#define NaN (0.0/0.0)
 
 /* Utilities go here. */
 static double
@@ -39,26 +41,44 @@ static struct msg_init param;
 
 /* Vehicle state, explicit and inferred. */
 static double vtime, here_x, here_y, dir, speed;
-static double rot_speed, rot_accel, max_rot_accel;
-static int ra_run, max_ra_run;
-
-#define NaN (0.0/0.0)
+static double rot_speed, max_rot_accel, min_rot_jerk = 1e6;
+static double tbuf[4], dbuf[4];
+static int samples;
 
 static void
 reset_vstate(void)
 {
-	vtime = here_x = here_y = dir = NaN;
 	speed = rot_speed = 0;
-	max_ra_run = ra_run = 0;
-	if (max_rot_accel > 10)
-		max_rot_accel = 1e-3; 
+	samples = 0;
+}
+
+static void
+solve_poly(int n, double x[], double y[], double c[])
+{
+	c[0] = y[0];
+
+	if (n > 1) {
+		double xp[n-1], yp[n-1], cp[n-1];
+		int i;
+
+		c[0] = y[0];
+		for (i = 1; i < n; ++i) {
+			xp[i-1] = x[i];
+			yp[i-1] = (y[i] - y[0]) / (x[i] - x[0]);
+		}
+		solve_poly(n-1, xp, yp, cp);
+		for (i = 1; i < n; ++i)
+			c[i] = cp[i-1];
+		for (i = 0; i < n - 1; ++i)
+			c[i] -= cp[i] * x[0];
+	}
 }
 
 static void
 update_vstate(double new_time, double new_x, double new_y,
     double new_dir /* RADIANS */, double new_speed)
 {
-	double dt = NaN, new_rot_speed = NaN, new_rot_accel = NaN;
+	double dt, dco[4];
 
 	dt = new_time - vtime;
 	if (dt == 0) {
@@ -75,30 +95,37 @@ update_vstate(double new_time, double new_x, double new_y,
 	here_x = new_x;
 	here_y = new_y;
 	speed = new_speed;
+	dir = dirdiff(new_dir, dir) + dir;
+	
+	dbuf[3] = dbuf[2];
+	dbuf[2] = dbuf[1];
+	dbuf[1] = dbuf[0];
+	dbuf[0] = dir;
+	tbuf[3] = tbuf[2] - dt;
+	tbuf[2] = tbuf[1] - dt;
+	tbuf[1] = tbuf[0] - dt;
+	tbuf[0] = 0; /* Yes, I know. */
+	++samples;
 
-	new_rot_speed = dirdiff(new_dir, dir) / dt;
-	if (isnan(new_rot_speed))
-		new_rot_speed = 0;
-	new_rot_speed = 2 * new_rot_speed - rot_speed;
-	new_rot_accel = fabs((new_rot_speed - rot_speed) / dt);
+	if (samples >= 4) {
+		double rot_accel, rot_jerk;
 
-	if (new_rot_accel > MRA_IGN
-	    && fabs(new_rot_accel - rot_accel) < MRA_EPS) {
-		++ra_run;
-		if (ra_run > max_ra_run) {
-			max_ra_run = ra_run;
-			max_rot_accel = new_rot_accel;
+		solve_poly(4, tbuf, dbuf, dco);
+		rot_speed = dco[1];
+		rot_accel = fabs(2 * dco[2]);
+		rot_jerk = fabs(6 * dco[3]);
+		
+		if (rot_accel > MRA_EPS
+		    && rot_jerk < min_rot_jerk + MRA_EPS
+		    && rot_accel > max_rot_accel - MRA_EPS) {
+			max_rot_accel = rot_accel;
+			min_rot_jerk = rot_jerk;
 		}
-	} else {
-		ra_run = 0;
+		fprintf(stderr, "Rotational stuff: %g   %g   %g   %g\r\n",
+		    dir, rot_speed, rot_accel, rot_jerk);
+		fprintf(stderr, "Rotational BEES:            %g   %g\r\n",
+		    max_rot_accel, min_rot_jerk);
 	}
-
-	rot_accel = new_rot_accel;
-	rot_speed = new_rot_speed;
-	dir = new_dir;
-
-	fprintf(stderr, "dir = %g   rs = %g   nra = %g   mra = %g\r\n",
-	    dir, rot_speed, new_rot_accel, max_rot_accel);
 }
 
 
@@ -431,10 +458,9 @@ int main(int argc, char** argv)
 		case MSG_BOULDER: {
 			struct msg_boulder *msg = (void*)gmsg;
 
-			dir = NaN;
-			if ((msg->time / 1000) < vtime) {
-				rot_speed = max_rot_accel = NaN;
-			}
+			samples = 0;
+			if ((msg->time / 1000) < vtime) 
+				/* do nothing */;
 		} break;			
 
 		default: fprintf(stderr, "newworld.c: bad message type %d\r\n", 
