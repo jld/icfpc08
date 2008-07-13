@@ -28,7 +28,6 @@ run(Serv, Pcast, Pworld) ->
 	    Pcast ! {get_best, self()},
 	    receive
 		{best, Tang, _Tut} ->
-		    io:format("Turning.~n"),
 		    steerage:turn(Serv, VS, Tang)
 	    end,
 	    run(Serv, Pcast, Pworld);
@@ -55,17 +54,16 @@ run(Serv, Pcast, Pworld) ->
 -record(raydec_cst, {vm, pworld, martians = [], span = 10.0 }).
 
 figure_span(#raydec_cst{ vm = VM, pworld = Pworld}) ->
-    Pworld ! {cast, VM#mob.x, VM#mob.y, VM#mob.dir, self()},
+    Pworld ! {cast, VM#mob.dir, self()},
     Pworld ! {get_init, self()}, % XXX hack
-    receive 
-	{hit, _D, {Dist, _Obj}} -> ok
+    receive
+	{hit, _D, _Type, _Turn, Dist} -> ok
     end,
     receive
 	{init, Ini} -> ok
     end,
     TTL = Dist / (VM#mob.speed + 1.0e-12),
     Spin = Ini#init.max_hard_turn * TTL / 3,
-%    io:format("Dist=~w TTL=~w Spin=~w~n", [Dist, TTL, Spin]),
     if Spin > 180 -> 180;
        true -> Spin
     end.
@@ -102,7 +100,7 @@ caster(ST, Bang, But) ->
 		    caster(ST, Bang, But)
 	    end
     end.
-		       
+
 
 gradto(HX, HY, OX, OY, VX, VY) ->
     DX = OX - HX,
@@ -112,7 +110,7 @@ gradto(HX, HY, OX, OY, VX, VY) ->
 
 evaluate(#raydec_cst{ vm = #mob{ x = HX, y = HY },
 		      pworld = Pworld, martians = Mar }, Cang) ->
-    Pworld ! {cast, HX, HY, Cang, self()},
+    Pworld ! {cast, Cang, self()},
     Crad = Cang * math:pi() / 180,
     VX = math:cos(Crad), VY = math:sin(Crad),
     Uhome = ?COEFF_HOME * gradto(HX, HY, 0, 0, VX, VY),
@@ -130,25 +128,16 @@ evaluate(#raydec_cst{ vm = #mob{ x = HX, y = HY },
 		       Acc + ?COEFF_MARTIAN * math:pow(Xmars, ?POW_MARTIAN);
 		   (_, Acc) -> Acc end,
 	       0, Mar),
-    receive 
-	{hit, _D, {Dist, Obj}} -> lovely
+    receive
+	{hit, _D, Type, _Turn, Dist} -> lovely
     end,
-    case Obj of 
-	[] -> Uobj = 0;
-	{horiz, _Y} -> Uobj = 0;
-	{vert, _X} -> Uobj = 0;
-	{Type, #mob {  }} ->
-	    % io:format("HIT: ~w~n", [Type]),
-	    case Type of
-		boulder -> Co = ?COEFF_HIT_B;
-		crater -> Co = ?COEFF_HIT_C;
-		home -> Co = ?COEFF_HIT_H;
-		martian -> Co = ?COEFF_HIT_M;
-		_ -> io:format("cast hit unknown type ~w~n", [Type]),
-		     Co = 0
-	    end,
-	    Uobj = Co / Dist;
-	_ -> io:format("cast hit unknown object ~w~n", [Obj]),
-	     Uobj = 0
+    case Type of 
+	boulder -> Co = ?COEFF_HIT_B;
+	crater -> Co = ?COEFF_HIT_C;
+	home -> Co = ?COEFF_HIT_H;
+	martian -> Co = ?COEFF_HIT_M;
+	_ -> %io:format("cast hit unknown type ~w~n", [Type]),
+	    Co = 0
     end,
+    Uobj = Co / Dist,
     Uhome + Umars + Uobj.

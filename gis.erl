@@ -1,6 +1,6 @@
 -module(gis).
 -include("stuff.hrl").
--export([vstate/0, world/1, world/2, 
+-export([vstate/0, world/2, world/3, 
 	 walls/1, cast/4, cast1/5]).
 
 -define(FUDGE_M, 0.05).
@@ -29,26 +29,38 @@ vstate(VS, Obs) ->
 	    io:format("vstate: unreognized message ~w~n", [Other])
     end.
 
-world(Ini) -> world(Ini, [{home, #mob{ x = 0.0, y = 0.0, r = 5.0 }}]).
+world(Ini, Pvst) -> 
+    Pvst ! {observe, self()},
+    receive 
+	{vstate, #vstate{ vmob = VM }} -> 
+	    world(Ini, VM, [{home, #mob{ x = 0.0, y = 0.0, r = 5.0 }}])
+    end.
 
-world(Ini, Stuff) ->
+world(Ini, VM, Stuff) ->
     receive
+	{vstate, #vstate{ vmob = NVM }} ->
+	    world(Ini, NVM, Stuff);
 	{seen, Obj} ->
 	    case lists:member(Obj, Stuff) of
-		true -> world(Ini, Stuff);
-		false -> world(Ini, [Obj |Stuff])
+		true -> world(Ini, VM, Stuff);
+		false -> world(Ini, VM, [Obj |Stuff])
 	    end;
-	{cast, X, Y, D, K} ->
-	    K ! {hit, D, cast(X, Y, D, walls(Ini) ++ Stuff)},
-	    world(Ini, Stuff);
+
+	{cast, TDir, K} ->
+	    #mob{ x = X, y = Y, dir = Dir } = VM,
+	    {Dist, {Type, _Obj}} = cast(X, Y, TDir, walls(Ini) ++ Stuff),
+	    K ! {hit, TDir, Type, steerage:steer(Dir, TDir), Dist},
+	    world(Ini, VM, Stuff);
+
 	{get_init, K} -> % XXX hack
 	    K ! {init, Ini},
-	    world(Ini, Stuff);
-	{dump, K} -> 
-	    K ! {world_dump, Stuff};
-	upgrade -> ?MODULE:world(Ini, Stuff);
+	    world(Ini, VM, Stuff);
+
+	upgrade ->
+	    ?MODULE:world(Ini, VM, Stuff);
 	Other ->
-	    io:format("world: unreognized message ~w~n", [Other])
+	    io:format("world: unrecognized message ~w~n", [Other]),
+	    world(Ini, VM, Stuff)
     end.
 
 walls(#init{ x_limit = XL, y_limit = YL }) ->

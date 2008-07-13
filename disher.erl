@@ -5,7 +5,7 @@
 start(Pvst, Pdec) ->
     receive
 	{initialize, Ini} -> 
-	    Pworld = spawn(gis, world, [Ini]),
+	    Pworld = spawn(gis, world, [Ini, Pvst]),
 	    Pdec ! { set_world, Pworld },
 	    trial(Pvst, Pworld, Pdec)
     end.
@@ -26,8 +26,9 @@ nab_martians(Objs) ->
     lists:filter(fun ({martian, _}) -> true; (_) -> false end, Objs).
 
 do_tele(Pvst, Pworld, {telemetry, VSt, Objs}) ->
-    Pvst ! {set_vstate, VSt#vstate{ others = nab_martians(Objs) }},
-    lists:foreach(fun ({martian, _}) -> 'FIXME';
+    Martians = nab_martians(Objs),
+    Pvst ! {set_vstate, VSt#vstate{ others = Martians }},
+    lists:foreach(fun ({martian, _}) -> nope;
 		      (Obj) -> Pworld ! {seen, Obj} end, Objs).
 
 run(Pvst, Pworld, Pdec) ->
