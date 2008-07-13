@@ -5,6 +5,8 @@
 -endif.
 
 start([Host, SPort |Stuff]) ->
+  %  fprof:trace([start, {file, "/tmp/fprof.trace"}]),
+   % spawn(fun () -> receive after 5000 -> fprof:trace([stop]) end end),
     start(Host, list_to_integer(SPort), Stuff).
 
 start(Host, Port, Stuff) ->

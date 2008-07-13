@@ -25,6 +25,8 @@ run(Serv, Pworld) ->
 	    run(Serv, Pworld);
 	{end_of_run, _T, _S} ->
 	    trial(Serv, Pworld);
+	decide ->
+	    unimplemented;
 	Other -> 
 	    io:format("simpledec: unhandled message ~w~n", [Other]),
 	    run(Serv, Pworld)

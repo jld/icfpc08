@@ -11,9 +11,13 @@ Stuff to do:
     save type of ray hits
     have doom limits for B and C (but perhaps not M)
   new martian handling, as discussed in lower sections
+    but do do practical tests against the old stuff
   consider a quadtree or even just static binning
     can benchmark the sizes for the latter
-
+  make the disher advise the decider when to decide
+    and aim for as soon before the next telem as sems to work
+    maybe this will allow decreasing STEER_MAGIC
+    
 =======
 
 The lightning round is done; prepare for the new world.

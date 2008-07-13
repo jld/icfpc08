@@ -19,12 +19,12 @@ trial(Serv, Pcast, Pworld) ->
 	    Pcast ! start_of_run,
 	    comms:scmd(Serv, a),
 	    comms:scmd(Serv, a),
-	    run(Serv, Pcast, Pworld)
+	    run(Serv, Pcast, Pworld, false)
     end.
 
-run(Serv, Pcast, Pworld) ->
+run(Serv, Pcast, Pworld, VS) ->
     receive
-	{vstate, VS} ->
+	decide when VS /= false ->
 	    Pcast ! {get_best, self()},
 	    receive
 		{best, _Tang, _Tut, Ttu} = Be ->
@@ -32,13 +32,15 @@ run(Serv, Pcast, Pworld) ->
 			      [(VS#vstate.vmob)#mob.dir, Be]),
 		    steerage:do_turn(Serv, VS, Ttu)
 	    end,
-	    run(Serv, Pcast, Pworld);
+	    run(Serv, Pcast, Pworld, VS);
+	{vstate, NVS} ->
+	    run(Serv, Pcast, Pworld, NVS);
 	{end_of_run, _T, _S} ->
 	    Pcast ! end_of_run,
 	    trial(Serv, Pcast, Pworld);
 	Other -> 
 	    io:format("raydec: unhandled message ~w~n", [Other]),
-	    run(Serv, Pcast, Pworld)
+	    run(Serv, Pcast, Pworld, VS)
     end.
 
 

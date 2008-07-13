@@ -20,6 +20,10 @@
 #define ARC_LIMIT (6 * param.max_sense)
 #define FUDGE_B 0.6
 #define FUDGE_C 0.1
+#define FUDGE_CX 0.00
+#define MRA_EPS 1e-3
+#define MRA_IGN 3e-3
+#define STEER_MAGIC 1.2 /* Grrr. */
 
 /* Utilities go here. */
 static double
@@ -35,15 +39,19 @@ static struct msg_init param;
 
 /* Vehicle state, explicit and inferred. */
 static double vtime, here_x, here_y, dir, speed;
-static double rot_speed, max_rot_accel;
+static double rot_speed, rot_accel, max_rot_accel;
+static int ra_run, max_ra_run;
 
 #define NaN (0.0/0.0)
 
 static void
 reset_vstate(void)
 {
-	vtime = speed = rot_speed = here_x = here_y = NaN;
-	max_rot_accel = 1e-3;
+	vtime = here_x = here_y = dir = NaN;
+	speed = rot_speed = 0;
+	ra_run = 0;
+	if (max_rot_accel > 10)
+		max_rot_accel = 1e-3; 
 }
 
 static void
@@ -65,12 +73,23 @@ update_vstate(double new_time, double new_x, double new_y,
 	speed = new_speed;
 
 	new_rot_speed = dirdiff(new_dir, dir) / dt;
+	if (isnan(new_rot_speed))
+		new_rot_speed = 0;
+	new_rot_speed = 2 * new_rot_speed - rot_speed;
 	new_rot_accel = fabs((new_rot_speed - rot_speed) / dt);
 
-	/* FIXME this is wrong; a running average would be good. */
-	if (new_rot_accel > max_rot_accel) {
-		max_rot_accel = new_rot_accel;
+	if (new_rot_accel > MRA_IGN
+	    && fabs(new_rot_accel - rot_accel) < MRA_EPS) {
+		++ra_run;
+		if (ra_run > max_ra_run) {
+			max_ra_run = ra_run;
+			max_rot_accel = new_rot_accel;
+		}
+	} else {
+		ra_run = 0;
 	}
+
+	rot_accel = new_rot_accel;
 	rot_speed = new_rot_speed;
 	dir = new_dir;
 
@@ -91,7 +110,7 @@ steer(double dir, double rs, double dtarg)
 	dhalt = dir + stoptime * rs / 2;
 	ddiff = dirdiff(dtarg, dhalt);
 
-	if (fabs(ddiff) < 2 * max_rot_accel * SIM_TELE * SIM_TELE)
+	if (fabs(ddiff) < STEER_MAGIC * max_rot_accel * SIM_TELE * SIM_TELE)
 		return 0;
 
 	return ddiff < 0 ? -2 : 2;
@@ -131,7 +150,8 @@ add_object(double x, double y, double rr, char type)
 
 	switch (type) {
 	case 'b': r += FUDGE_B; break;
-	case 'c': r += FUDGE_C; break;
+	case 'c': r *= FUDGE_CX + 1;
+		  r += FUDGE_C; break;
 	}
 
 	for (i = objects; i != NULL; i = i->cdr)

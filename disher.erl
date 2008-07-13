@@ -22,7 +22,7 @@ trial(Pvst, Pworld, Pdec) ->
 	    receive { time, _ } -> ok end,
 	    % ready now
 	    Pdec ! start_of_run,
-	    run(Pvst, Pworld, Pdec)
+	    run(Pvst, Pworld, Pdec, true)
     end.
 
 nab_martians(Objs) ->
@@ -34,11 +34,15 @@ do_tele(Pvst, Pworld, {telemetry, VSt, Objs}) ->
     lists:foreach(fun ({martian, _}) -> nope;
 		      (Obj) -> Pworld ! {seen, Obj} end, Objs).
 
-run(Pvst, Pworld, Pdec) ->
+run(Pvst, Pworld, Pdec, Ticking) ->
+    After = if Ticking -> 25; true -> infinity end,
     receive
 	{telemetry, _S, _O} = Tele ->
 	    do_tele(Pvst, Pworld, Tele),
-	    run(Pvst, Pworld, Pdec);
+	    if Ticking -> Pdec ! decide;
+	       true -> ok
+	    end,
+	    run(Pvst, Pworld, Pdec, true);
 	{end_of_run, _T, _S} = End ->
 	    Pdec ! End,
 	    Pworld ! rset,
@@ -46,8 +50,11 @@ run(Pvst, Pworld, Pdec) ->
 	{boulder_hit, _T} = BH ->
 	    Pworld ! BH,
 	    Pdec ! BH,
-	    run(Pvst, Pworld, Pdec);
+	    run(Pvst, Pworld, Pdec, Ticking);
 	Other ->
 	    Pdec ! Other,
-	    run(Pvst, Pworld, Pdec)
+	    run(Pvst, Pworld, Pdec, Ticking)
+    after After ->
+	    Pdec ! decide,
+	    run(Pvst, Pworld, Pdec, false)
     end.
