@@ -18,7 +18,7 @@ Tasks:
   simulate path for 100ms (or measure dt?) given turn state
     path state: x, y, dir, odometer
     alters state, returns optional hit object
-  fake steering (this dir * target dir -> turn state) 
+  do steering (this dir * target dir -> turn state) 
   These together become the arc cast
     (when to stop?  make something up.)
   

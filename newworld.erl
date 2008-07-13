@@ -1,5 +1,6 @@
 -module(newworld).
 -include("stuff.hrl").
+-export([relay/1]).
 
 -define(MSG_INIT, 0).
 -define(MSG_WHERE, 1).
@@ -26,8 +27,9 @@ relay(P) ->
 		    (I#init.max_hard_turn)/float-native>>),
 	    relay(P);
 
-	{where, VM} ->
-	    ?pc(P, [<<?MSG_WHERE, 0:56>>,
+	{where, Time, VM} ->
+	    ?pc(P, [<<?MSG_WHERE, 0:56,
+		     Time/float-native>>,
 		    (encode_mob(VM))]),
 	    relay(P);
 
@@ -39,7 +41,7 @@ relay(P) ->
 
 	{martians, ML} ->
 	    ?pc(P, [<<?MSG_MARTIANS, 0:24,
-		    length(ML):32/native>>
+		     (length(ML)):32/native>>
 		    | lists:map(fun encode_mob/1, ML)]),
 	    relay(P);
 

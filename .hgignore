@@ -6,3 +6,6 @@
 ^dist$
 ^stage$
 \.tgz$
+^test\.
+^a\.out$
+^newworld$

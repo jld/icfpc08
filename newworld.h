@@ -21,7 +21,7 @@ struct msg_init {
 
 struct msg_where {
 	unt8_t msg_type, pad[7];
-	double x, y, dir, speed;
+	double time, x, y, dir, speed;
 };
 
 struct msg_seen {
@@ -45,7 +45,8 @@ struct msg_cast {
 };
 
 struct msg_hit {
-	uint8_t msg_type, obj_type, first_turn, pad[5];
+	uint8_t msg_type, obj_type;
+	int8_t first_turn, pad[5];
 	double odometer;
 };
 

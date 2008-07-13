@@ -19,6 +19,10 @@ vstate(VS, Obs) ->
 	{unobserve, K} ->
 	    vstate(VS, lists:delete(K, Obs));
 	{set_vstate, NVS} ->
+%% 	    #mob{ x = OX, y = OY, dir = OD } = VS#vstate.vmob,
+%% 	    #mob{ x = NX, y = NY, dir = ND } = NVS#vstate.vmob,
+%% 	    io:format("old dir = ~w, new dir = ~w, atan2 dir = ~w~n",
+%% 		      [OD, ND, 180*math:atan2(NY-OY,NX-OX)/math:pi()]),
 	    lists:foreach(fun (K) -> K ! {vstate, NVS} end, Obs),
 	    vstate(NVS, Obs);
 	Other ->
