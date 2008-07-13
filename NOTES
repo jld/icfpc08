@@ -15,6 +15,9 @@ f(x) = x^2 + x - x - 1 + 2
 
 Okay, the bloody arc-caster is more or less pretending to work.
 
+Yowling:
+  Latency.  It'd be great if I could adaptively figure it out.
+
 Stuff to do:
   [DONE] preload with the home
   [DONE] fix up the mra computation
@@ -32,7 +35,7 @@ Stuff to do:
   [DONE] make the disher advise the decider when to decide
     and aim for as soon before the next telem as sems to work
     maybe this will allow decreasing STEER_MAGIC
-  change casting: apply the current turn to the first RUN_TELE
+  [DONE, BUT] change casting: apply the current turn to the first RUN_TELE
     (and return the next one after that)
     (actually, pass in the delay)
     because its advice won't be applied until that long after the tele

@@ -55,6 +55,6 @@ run(Pvst, Pworld, Pdec, Ticking) ->
 	    Pdec ! Other,
 	    run(Pvst, Pworld, Pdec, Ticking)
     after After ->
-	    Pdec ! decide,
+	    Pdec ! decide,	
 	    run(Pvst, Pworld, Pdec, false)
     end.

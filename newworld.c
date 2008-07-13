@@ -43,7 +43,7 @@ static struct msg_init param;
 static double vtime, here_x, here_y, dir, speed;
 static double rot_speed, max_rot_accel, min_rot_jerk = 1e6;
 static double tbuf[4], dbuf[4];
-static int samples;
+static int samples, cur_turn;
 
 static void
 reset_vstate(void)
@@ -58,7 +58,7 @@ solve_poly(int n, double x[], double y[], double c[])
 	c[0] = y[0];
 
 	if (n > 1) {
-		double xp[n-1], yp[n-1], cp[n-1];
+		double xp[n-1], yp[n-1], cp[n-1]; /* C99 */
 		int i;
 
 		c[0] = y[0];
@@ -115,16 +115,16 @@ update_vstate(double new_time, double new_x, double new_y,
 		rot_accel = fabs(2 * dco[2]);
 		rot_jerk = fabs(6 * dco[3]);
 		
-		if (rot_accel > MRA_EPS
-		    && rot_jerk < min_rot_jerk + MRA_EPS
-		    && rot_accel > max_rot_accel - MRA_EPS) {
+		if (rot_accel > MRA_EPS /* && rot_jerk > MRA_EPS */
+		    && (rot_jerk < min_rot_jerk - MRA_EPS
+			|| (rot_accel < min_rot_jerk + MRA_EPS
+			    && rot_accel > max_rot_accel - MRA_EPS))) {
 			max_rot_accel = rot_accel;
 			min_rot_jerk = rot_jerk;
 		}
-		fprintf(stderr, "Rotational stuff: %g   %g   %g   %g\r\n",
-		    dir, rot_speed, rot_accel, rot_jerk);
-		fprintf(stderr, "Rotational BEES:            %g   %g\r\n",
-		    max_rot_accel, min_rot_jerk);
+
+		fprintf(stderr, "mra %g   mrj %g     ra %g   rj %g\r\n",
+		    max_rot_accel, min_rot_jerk, rot_accel, rot_jerk);
 	}
 }
 
@@ -355,7 +355,7 @@ sim_run(struct sim_state *ss, double dt, double trs)
 
 /* Finally, put it all together and cast. */
 static struct object*
-cast_arc(double tdir, int8_t *pfirst_turn, double *podometer)
+cast_arc(double tdir, double latency, int8_t *pfirst_turn, double *podometer)
 {
 	struct object *hit = NULL;
 	struct sim_state ss;
@@ -364,7 +364,13 @@ cast_arc(double tdir, int8_t *pfirst_turn, double *podometer)
 
 	sim_start(&ss);
 	l = ARC_LIMIT / param.max_speed / SIM_TELE;
-	
+
+	if (latency > 0) {
+		hit = sim_run(&ss, latency, turn_to_rot_speed(cur_turn));
+		if (hit)
+			goto hit;
+	}
+
 	for (i = 0; i < l; ++i) {
 		turn = steer(ss.dir, ss.rs, tdir);
 		if (!turnedp) {
@@ -373,9 +379,9 @@ cast_arc(double tdir, int8_t *pfirst_turn, double *podometer)
 		}
 		hit = sim_run(&ss, SIM_TELE, turn_to_rot_speed(turn));
 		if (hit)
-			break;
+			goto hit;
 	}
-	*podometer = ss.odometer;
+hit:   *podometer = ss.odometer;
 
 	return hit;
 }
@@ -422,6 +428,7 @@ int main(int argc, char** argv)
 			struct msg_where *msg = (void*)gmsg;
 			update_vstate(msg->time / 1000, msg->x, msg->y,
 			    msg->dir * M_PI / 180, msg->speed);
+			cur_turn = msg->turning;
 		} break;
 		case MSG_SEEN: {
 			struct msg_seen *msg = (void*)gmsg;
@@ -436,7 +443,8 @@ int main(int argc, char** argv)
 			struct object* hit;
 
 			++cast_ctr;
-			hit = cast_arc(msg->dir * M_PI / 180,
+			hit = cast_arc(msg->dir * M_PI / 180, 
+			    msg->latency / 1000,
 			    &resp.first_turn, &resp.odometer);
 			if (isnan(resp.odometer))
 				resp.odometer = 0.0;

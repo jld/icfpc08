@@ -17,7 +17,12 @@ send_turn(_Serv, _TC, _TG) -> ok.
 
 do_turn(Serv, VS, TG) ->
     % XXX do not use twice without intervening telemetry; this should be fixed
-    send_turn(Serv, VS#vstate.vctlt, TG).
+    TC = VS#vstate.vctlt,
+    if TC /= TG ->
+	    io:format("Turning from ~w to ~w.~n", [TC, TG]);
+       true -> ok
+    end,
+    send_turn(Serv, TC, TG).
 
 steer(Dfwd, Dtarg) ->
     Ddel = fixang(Dtarg - Dfwd),

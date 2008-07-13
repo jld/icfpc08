@@ -49,8 +49,10 @@ send_init(P, I) ->
 
 relay(P) ->
     receive
-	{vstate, #vstate{ time = Time, vmob = VM, others = Martians }} ->
-	    ?pc(P, [<<?MSG_WHERE, 0:56,
+	{vstate, #vstate{ time = Time, vmob = VM, vctlt = Turning,
+			  others = Martians }} ->
+	    ?pc(P, [<<?MSG_WHERE, 
+		     Turning/signed, 0:48,		     
 		     Time/float-native>>,
 		    (encode_mob(VM))]),
 	    ?pc(P, [<<?MSG_MARTIANS, 0:24,
@@ -64,9 +66,9 @@ relay(P) ->
 		    X/float-native, Y/float-native, R/float-native>>),
 	    relay(P);
 
-	{cast, D, K} ->
+	{cast, D, Lat, K} ->
 	    ?pc(P, <<?MSG_CAST, 0:56,
-		    D/float-native>>),
+		    D/float-native, Lat/float-native>>),
 	    receive
 		{P, {data, <<?MSG_HIT, Type, Turn/signed, _Pad:40,
 			    Dist/float-native>>}} ->

@@ -22,7 +22,8 @@ struct msg_init {
 };
 
 struct msg_where {
-	uint8_t msg_type, pad[7];
+	uint8_t msg_type;
+	int8_t turning, pad[6];
 	double time, x, y, dir, speed;
 };
 
@@ -43,7 +44,7 @@ struct msg_martians {
 
 struct msg_cast {
 	uint8_t msg_type, pad[7];
-	double dir;
+	double dir, latency;
 };
 
 struct msg_hit {

@@ -30,8 +30,8 @@ run(Serv, Pcast, Pworld, VS) ->
 	    Pcast ! {get_best, self()},
 	    receive
 		{best, _Tang, _Tut, Ttu} = Be ->
-		    io:format("Best: ~w -> ~w~n",
-			      [(VS#vstate.vmob)#mob.dir, Be]),
+%% 		    io:format("Best: ~w -> ~w~n",
+%% 			      [(VS#vstate.vmob)#mob.dir, Be]),
 		    steerage:do_turn(Serv, VS, Ttu)
 	    end,
 	    run(Serv, Pcast, Pworld, VS);
@@ -61,7 +61,7 @@ run(Serv, Pcast, Pworld, VS) ->
 
 -ifdef(OBS_FIGURE_SPAN).
 figure_span(#raydec_cst{ vm = VM, pworld = Pworld, init = Ini}) ->
-    Pworld ! {cast, VM#mob.dir, self()},
+    Pworld ! {cast, VM#mob.dir, 0, self()},
     receive
 	{hit, _D, _Type, _Turn, Dist} -> ok
     end,
@@ -122,7 +122,7 @@ gradto(HX, HY, OX, OY, VX, VY) ->
 
 evaluate(#raydec_cst{ vm = #mob{ x = HX, y = HY },
 		      pworld = Pworld, martians = Mar }, Cang) ->
-    Pworld ! {cast, Cang, self()},
+    Pworld ! {cast, Cang, 75, self()}, % XXX constant
     Crad = Cang * math:pi() / 180,
     VX = math:cos(Crad), VY = math:sin(Crad),
     Uhome = ?COEFF_HOME * gradto(HX, HY, 0, 0, VX, VY),
