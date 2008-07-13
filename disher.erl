@@ -9,6 +9,7 @@ start(Pvst, Pdec) ->
     receive
 	{initialize, Ini} -> 
 	    Pworld = spawn(?WORLD, world, [Ini, Pvst]),
+	    Pworld ! {seen, {home, #mob{ x = 0.0, y = 0.0, r = 5.0 }}},
 	    Pdec ! { set_world, Pworld, Ini },
 	    trial(Pvst, Pworld, Pdec)
     end.

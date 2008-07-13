@@ -33,7 +33,7 @@ world(Ini, Pvst) ->
     Pvst ! {observe, self()},
     receive 
 	{vstate, #vstate{ vmob = VM }} -> 
-	    world(Ini, VM, [{home, #mob{ x = 0.0, y = 0.0, r = 5.0 }}])
+	    world(Ini, VM, [])
     end.
 
 world(Ini, VM, Stuff) ->
