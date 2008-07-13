@@ -116,8 +116,8 @@ update_vstate(double new_time, double new_x, double new_y,
 		
 		if (rot_accel > MRA_EPS /* && rot_jerk > MRA_EPS */
 		    && (rot_jerk < min_rot_jerk - MRA_EPS
-			|| (rot_accel < min_rot_jerk + MRA_EPS
-			    && rot_accel > max_rot_accel - MRA_EPS))) {
+			|| (rot_jerk < min_rot_jerk + MRA_EPS
+			    && rot_accel > max_rot_accel))) {
 			max_rot_accel = rot_accel;
 			min_rot_jerk = rot_jerk;
 		}
