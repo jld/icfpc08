@@ -1,6 +1,16 @@
 -module(newworld).
 -include("stuff.hrl").
--export([relay/1]).
+-export([world/0, relay/1]).
+
+world() ->
+    case os:getenv("ICFP_BIN") of
+	false -> Dir = "."; 
+	Dir -> ok
+    end,
+    P = open_port({spawn, Dir ++ "/newworld"},
+		  [{packet, 4}, binary]),
+    link(P),
+    relay(P).
 
 -define(MSG_INIT, 0).
 -define(MSG_WHERE, 1).
@@ -16,7 +26,7 @@ encode_mob(#mob{ x = X, y = Y, dir = D, speed = S }) ->
 
 relay(P) ->
     receive
-	{init, I} ->
+	{init, I, K} ->
 	    ?pc(P, <<?MSG_INIT, 0:56,
 		    (I#init.x_limit)/float-native,
 		    (I#init.y_limit)/float-native,
@@ -25,6 +35,7 @@ relay(P) ->
 		    (I#init.max_speed)/float-native,
 		    (I#init.max_turn)/float-native,
 		    (I#init.max_hard_turn)/float-native>>),
+	    K ! inited,
 	    relay(P);
 
 	{where, Time, VM} ->
@@ -55,6 +66,8 @@ relay(P) ->
 	    end,
 	    relay(P);
 
+	upgrade ->
+	    newworld:relay(P);
 	Other ->
 	    io:format("newworld relay: unrecognized message ~w~n", [Other]),
 	    relay(P)

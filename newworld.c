@@ -47,7 +47,7 @@ update_vstate(double new_time, double new_x, double new_y,
 	if (goingp) {
 		dt = new_time - vtime;
 		if (dt <= 0) {
-			fprintf(stderr, "Nonpositive dt: %g (at %g)\n",
+			fprintf(stderr, "Nonpositive dt: %g (at %g)\r\n",
 			    dt, new_time);
 			return;
 		}
@@ -96,7 +96,7 @@ turn_to_rot_speed(int turn)
 	case 1: return param.max_turn;
 	case 2: return param.max_hard_turn;
 	default:
-		fprintf(stderr, "Bad turn: %d\n", turn);
+		fprintf(stderr, "Bad turn: %d\r\n", turn);
 		return 0;
 	}
 }
@@ -131,7 +131,7 @@ add_object(double x, double y, double rr, char type)
 	
 	i = malloc(sizeof(struct object));
 	i->x = x;
-	i->y = x;
+	i->y = y;
 	i->r = r;
 	i->type = type;
 	i->cdr = objects;
@@ -236,7 +236,7 @@ cast_arc(double tdir, int8_t *pfirst_turn, double *podometer)
 	int turnedp = 0;
 
 	sim_start(&ss);
-	l = ARC_LIMIT / SIM_TELE;
+	l = ARC_LIMIT / param.max_speed / SIM_TELE;
 	
 	for (i = 0; i < l; ++i) {
 		turn = steer(ss.dir, tdir);
@@ -259,7 +259,7 @@ static uint64_t cast_ctr;
 static void signoff(const char* why)
 {
 	fprintf(stderr, "newworld.c halting on %s"
-	    " after %"PRIu64" casts and %gs CPU.\n",
+	    " after %"PRIu64" casts and %gs CPU.\r\n",
 	    why, cast_ctr, ((double)clock())/CLOCKS_PER_SEC);
 }
 
@@ -269,12 +269,20 @@ int main(int argc, char** argv)
 	struct msg* gmsg;
 
 	for (;;) {
-		if (fread(&msglen, 4, 1, stdin) != 4) {
+		msglen = 0xDEADBEEF;
+		if (fread(&msglen, 4, 1, stdin) != 1) {
 			signoff("end of input");
 			return 0;
 		}
-		gmsg = malloc(ntohl(msglen));
 		
+		msglen = ntohl(msglen);
+		gmsg = malloc(msglen);
+
+		if (fread(gmsg, msglen, 1, stdin) != 1) {
+			signoff("end of input");
+			return 0;
+		}
+
 		switch(gmsg->msg_type) {
 		case MSG_INIT: {
 			struct msg_init *msg = (void*)gmsg;
@@ -300,7 +308,7 @@ int main(int argc, char** argv)
 			++cast_ctr;
 			hit = cast_arc(msg->dir,
 			    &resp.first_turn, &resp.odometer);
-			resp.obj_type = hit->type;
+			resp.obj_type = hit ? hit->type : 0;
 			resp.msg_type = MSG_HIT;
 			memset(&resp.pad, 0, sizeof(resp.pad));
 			
@@ -312,7 +320,7 @@ int main(int argc, char** argv)
 				return 1;
 			}
 		} break;
-		default: fprintf(stderr, "newworld.c: bad message type %d\n", 
+		default: fprintf(stderr, "newworld.c: bad message type %d\r\n", 
 		    gmsg->msg_type);
 		}
 		free(gmsg);
