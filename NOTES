@@ -2,7 +2,7 @@ Okay, the bloody arc-caster is more or less pretending to work.
 
 Stuff to do:
   preload with the home
-  fix up the mra computation
+  [DONE] fix up the mra computation
   adjust the ray-cast stopping conditions
     odometer limit (in addition to time limit)
     hitting-the-wall limit
@@ -14,10 +14,17 @@ Stuff to do:
     but do do practical tests against the old stuff
   consider a quadtree or even just static binning
     can benchmark the sizes for the latter
-  make the disher advise the decider when to decide
+  [DONE] make the disher advise the decider when to decide
     and aim for as soon before the next telem as sems to work
     maybe this will allow decreasing STEER_MAGIC
-    
+  change casting: apply the current turn to the first RUN_TELE
+    (and return the next one after that)
+    (actually, pass in the delay)
+    because its advice won't be applied until that long after the tele
+      and it won't be
+  reliably simulate boulders
+    if the boulder is large and close enough
+
 =======
 
 The lightning round is done; prepare for the new world.

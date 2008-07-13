@@ -44,8 +44,7 @@ run(Pvst, Pworld, Pdec, Ticking) ->
 	    end,
 	    run(Pvst, Pworld, Pdec, true);
 	{end_of_run, _T, _S} = End ->
-	    Pdec ! End,
-	    Pworld ! rset,
+	    Pvst ! End,
 	    trial(Pvst, Pworld, Pdec);
 	{boulder_hit, _T} = BH ->
 	    Pworld ! BH,

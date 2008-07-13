@@ -74,12 +74,14 @@ relay(P) ->
 	    % Should there be a timeout here, just in case?
 	    end,
 	    relay(P);
-	rset ->
-	    ?pc(P, <<?MSG_RSET, 0:56>>),
-	    relay(P);
+	{sync, K} ->
+	    K ! sync;
 	{boulder_hit, T} ->
 	    ?pc(P, <<?MSG_BOULDER, 0:56,
 		    T/float-native>>),
+	    relay(P);
+	{end_of_run, _T, _S} ->
+	    ?pc(P, <<?MSG_RSET, 0:56>>),
 	    relay(P);
 
 	upgrade ->

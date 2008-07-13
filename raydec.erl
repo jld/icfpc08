@@ -19,12 +19,14 @@ trial(Serv, Pcast, Pworld) ->
 	    Pcast ! start_of_run,
 	    comms:scmd(Serv, a),
 	    comms:scmd(Serv, a),
-	    run(Serv, Pcast, Pworld, false)
+	    receive {vstate, VS} ->
+		    run(Serv, Pcast, Pworld, VS)
+	    end
     end.
 
 run(Serv, Pcast, Pworld, VS) ->
     receive
-	decide when VS /= false ->
+	decide ->
 	    Pcast ! {get_best, self()},
 	    receive
 		{best, _Tang, _Tut, Ttu} = Be ->
@@ -36,7 +38,6 @@ run(Serv, Pcast, Pworld, VS) ->
 	{vstate, NVS} ->
 	    run(Serv, Pcast, Pworld, NVS);
 	{end_of_run, _T, _S} ->
-	    Pcast ! end_of_run,
 	    trial(Serv, Pcast, Pworld);
 	Other -> 
 	    io:format("raydec: unhandled message ~w~n", [Other]),
@@ -95,7 +96,7 @@ caster(ST, Bang, But, Btu) ->
 	{get_best, K} ->
 	    K ! {best, Bang, But, Btu},
 	    caster(ST, Bang, But, Btu);
-	end_of_run ->
+	{end_of_run, _T, _S} ->
 	    caster_0(ST#raydec_cst.pworld, ST#raydec_cst.init)
     after 0 ->
 	    Rang = (ST#raydec_cst.vm)#mob.dir

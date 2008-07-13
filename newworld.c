@@ -49,7 +49,7 @@ reset_vstate(void)
 {
 	vtime = here_x = here_y = dir = NaN;
 	speed = rot_speed = 0;
-	ra_run = 0;
+	max_ra_run = ra_run = 0;
 	if (max_rot_accel > 10)
 		max_rot_accel = 1e-3; 
 }
@@ -61,10 +61,14 @@ update_vstate(double new_time, double new_x, double new_y,
 	double dt = NaN, new_rot_speed = NaN, new_rot_accel = NaN;
 
 	dt = new_time - vtime;
-	if (dt <= 0 && !isnan(dt)) {
-		fprintf(stderr, "Nonpositive dt: %g (at %g)\r\n",
-		    dt, new_time);
+	if (dt == 0) {
+		fprintf(stderr, "Duplicate telemetry (time %g)\r\n", new_time);
 		return;
+	} else if (dt < 0) {
+		fprintf(stderr, "Negative dt %g at time %g; resetting!\r\n",
+		    dt, new_time);
+		reset_vstate();
+		dt = new_time - vtime;
 	}
 
 	vtime = new_time;
@@ -133,19 +137,45 @@ turn_to_rot_speed(int turn)
 
 
 
-/* The object database (trivial for now). */
+/* The object database (static binning, but could have been quadtrees). */
 struct object {
 	double x, y, r;
 	struct object *cdr;
 	char type;
 };
 
-static struct object *objects;
+#define MAP_BINS 32
+static struct object *objects[MAP_BINS][MAP_BINS], *allobjects;
+
+#define X_TO_BIN(x) (((x) + param.x_lim) * MAP_BINS / (2 * param.x_lim))
+#define Y_TO_BIN(y) (((y) + param.y_lim) * MAP_BINS / (2 * param.y_lim))
+#define BIN_TO_XL(x) (((x) * (2 * param.x_lim) / MAP_BINS) - param.x_lim)
+#define BIN_TO_YL(y) (((y) * (2 * param.y_lim) / MAP_BINS) - param.y_lim)
+
+static int
+add_object_to(double x, double y, double r, char type, struct object **chain)
+{
+	struct object *i;
+
+	for (i = *chain; i != NULL; i = i->cdr)
+		if (i->x == x && i->y == y &&
+		    /* No, I don't need epsilons, actually.  I hope. */
+		    i->r == r && i->type == type)
+			return 0;
+
+	i = malloc(sizeof(struct object));
+	i->x = x;
+	i->y = y;
+	i->r = r;
+	i->type = type;
+	i->cdr = *chain;
+	*chain = i;
+	return 1;
+}
 
 static void
 add_object(double x, double y, double rr, char type)
 {
-	struct object *i;
 	double r = rr;
 
 	switch (type) {
@@ -154,36 +184,70 @@ add_object(double x, double y, double rr, char type)
 		  r += FUDGE_C; break;
 	}
 
-	for (i = objects; i != NULL; i = i->cdr)
-		if (i->x == x && i->y == y &&
-		    /* No, I don't need epsilons, actually.  I hope. */
-		    i->r == r && i->type == type)
-			return;
+	if (add_object_to(x, y, r, type, &allobjects)) {
+		int xmin, xmax, ymin, ymax, ix, iy;
 
-	i = malloc(sizeof(struct object));
-	i->x = x;
-	i->y = y;
-	i->r = r;
-	i->type = type;
-	i->cdr = objects;
-	objects = i;
+		xmin = X_TO_BIN(x - r);
+		if (xmin < 0)
+			xmin = 0;
+		xmax = X_TO_BIN(x + r);
+		if (xmax >= MAP_BINS)
+			xmax = MAP_BINS - 1;
+		ymin = Y_TO_BIN(y - r);
+		if (ymin < 0)
+			ymin = 0;
+		ymax = Y_TO_BIN(y + r);
+		if (ymax >= MAP_BINS)
+			ymax = MAP_BINS - 1;
+		
+		fprintf(stderr, "%d-%d, %d-%d\r\n", xmin, xmax, ymin, ymax);
+		for (ix = xmin; ix <= xmax; ++ix)
+			for (iy = ymin; iy <= ymax; ++iy)
+				add_object_to(x, y, r, type, &objects[ix][iy]);
+	}			
 }
 
 
 struct obj_cursor {
-	int nothing;
+	struct object **chain;
+	double xl, xh, yl, yh;
 };
 
-static void
-obj_cursor_init(struct obj_cursor* cu, double x, double y)
+static int
+obj_cursor_oob(struct obj_cursor *cu)
 {
-	cu = cu; x = x; y = y;
+	return cu->chain == NULL;
 }
 
 static void
 obj_cursor_move(struct obj_cursor *cu, double x, double y)
 {
-	cu = cu; x = x; y = y;
+	int ix, iy;
+
+	if (cu->chain &&
+	    x >= cu->xl && x < cu->xh && y >= cu->yl && y < cu->yh)
+		return;
+
+	ix = X_TO_BIN(x);
+	iy = Y_TO_BIN(y);
+
+	if (ix < 0 || ix >= MAP_BINS || iy < 0 || iy >= MAP_BINS) {
+		cu->chain = NULL;
+	} else {
+		cu->chain = &objects[ix][iy];
+		cu->xl = BIN_TO_XL(ix);
+		cu->xh = BIN_TO_XL(ix + 1);
+		cu->yl = BIN_TO_XL(iy);
+		cu->yh = BIN_TO_XL(iy + 1);
+	}
+}
+
+static void
+obj_cursor_init(struct obj_cursor* cu, double x, double y)
+{
+	cu->chain = NULL;
+	cu->xl = cu->xh = cu->yl = cu->yh = NaN;
+	obj_cursor_move(cu, x, y);
 }
 
 static struct object*
@@ -191,7 +255,10 @@ obj_cursor_test(struct obj_cursor* cu, double x, double y)
 {
 	struct object *i;
 
-	for (i = objects; i != NULL; i = i->cdr) {
+	if (!cu->chain)
+		return NULL;
+
+	for (i = *(cu->chain); i != NULL; i = i->cdr) {
 		double dx = x - i->x, dy = y - i->y;
 
 		if (dx*dx + dy*dy <= i->r*i->r)
@@ -237,6 +304,8 @@ sim_run(struct sim_state *ss, double dt, double trs)
 		ss->x += SIM_STEP * speed * cos(ss->dir);
 		ss->y += SIM_STEP * speed * sin(ss->dir);
 		obj_cursor_move(&ss->curs, ss->x, ss->y);
+		if (obj_cursor_oob(&ss->curs))
+			return NULL; /* XXX should be explicit wall thing */
 
 		ss->odometer += SIM_STEP * speed;
 		ss->dir += SIM_STEP * ss->rs;

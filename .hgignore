@@ -10,3 +10,4 @@
 ^a\.out$
 ^newworld$
 ^fprof\.
+^gmon\.
