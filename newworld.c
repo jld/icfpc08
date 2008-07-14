@@ -20,7 +20,7 @@
 #define ARC_LIMIT (6 * param.max_sense)
 #define SAFETY_RAD 3.0
 #define SAFETY_NEAR 5.0
-#define PURSUIT_SCALE 1.0
+#define MARTIAN_PROJECT 0.0
 
 #define FUDGE_B 0.6
 #define FUDGE_C 0.1
@@ -368,6 +368,11 @@ sim_run(struct sim_state *ss, double dt, double trs)
 static int nmartians;
 static struct martian martians[NMARTIANS];
 
+struct pursuit {
+	const struct martian *mp;
+	double emx, emy, dist;
+};
+
 static double 
 martian_d2(const struct martian *m)
 {
@@ -393,19 +398,33 @@ martian_intern(struct martian *m, unsigned n)
 	}
 }
 
-static double
-martian_pursuit(const struct martian *m, const struct sim_state *ss, double dt)
+static void
+martian_pursuit_init(struct pursuit *p, const struct martian *m)
 {
+	p->mp = m;
+	p->emx = m->x;
+	p->emy = m->y;
+	p->dist = martian_d2(m);
+}
+
+static void
+martian_pursuit(struct pursuit *p, const struct sim_state *ss, double dt)
+{
+	const struct martian *m = p->mp;
 	double 
-	    rdx = speed * cos(ss->dir) - m->speed * cos(m->dir),
-	    rdy = speed * sin(ss->dir) - m->speed * sin(m->dir),
-	    tox = m->x - ss->x,
-	    toy = m->y - ss->y,
+	    mdx = m->speed * cos(m->dir),
+	    mdy = m->speed * sin(m->dir),
+	    rdx = speed * cos(ss->dir) - mdx,
+	    rdy = speed * sin(ss->dir) - mdy,
+	    tox = p->emx - ss->x,
+	    toy = p->emy - ss->y,
 	    tor = sqrt(tox*tox + toy*toy),
 	    utox = tox/tor,
 	    utoy = toy/tor;
-
-	return dt * (rdx * utox + rdy * utoy);
+	
+	p->dist -= dt * (rdx * utox + rdy * utoy);
+	p->emx += mdx * MARTIAN_PROJECT;
+	p->emy += mdy * MARTIAN_PROJECT;
 }
 
 
@@ -417,7 +436,7 @@ cast_arc(double tdir, double latency,
 	struct object *hit = NULL;
 	struct sim_state ss;
 	double unsafety = 0;
-	double pursuit[NMARTIANS];
+	struct pursuit pursuit[NMARTIANS];
 	int i, j, l, turn;
 	int turnedp = 0;
 	char xhit = 0;
@@ -426,7 +445,7 @@ cast_arc(double tdir, double latency,
 	l = ARC_LIMIT / param.max_speed / SIM_TELE;
 
 	for (j = 0; j < nmartians; ++j)
-		pursuit[j] = sqrt(martian_d2(&martians[j]));
+		martian_pursuit_init(&pursuit[j], &martians[j]);
 
 	if (latency > 0) {
 		hit = sim_run(&ss, latency, turn_to_rot_speed(cur_turn));
@@ -449,9 +468,8 @@ cast_arc(double tdir, double latency,
 #endif
 
 		for (j = 0; j < nmartians; ++j) {
-			pursuit[j] -= PURSUIT_SCALE *
-			    martian_pursuit(&martians[j], &ss, SIM_TELE);
-			if (pursuit[j] < 0) {
+			martian_pursuit(&pursuit[j], &ss, SIM_TELE);
+			if (pursuit[j].dist < 0) {
 				xhit = 'm';
 				goto hit;
 			}

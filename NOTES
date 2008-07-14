@@ -1,3 +1,20 @@
+The Final Hours
+
+The Martian pursuit is wonky
+  perhaps track the M positions, and advance them
+    by some fraction of normal?
+    this will magnify the effect of dodging to the side
+    without lowering resistance to faceplants
+
+Also some unfortunate crater dives remain.
+  I'm loath to lower the minimum speed thing, but....
+    I suppose I could have a multi-tiered doom
+
+DEORBITING.  NOW.
+  But how to test the MF?
+
+========
+
 Maybe try boulder modeling?
 
 out = .75 * reflection + .25 * in
