@@ -1,2 +1,3 @@
 #!/bin/sh
+export ICFP_BIN=bin
 exec erl -noshell -pa lib -run rover start "$1" "$2" init stop

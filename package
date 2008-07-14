@@ -14,6 +14,7 @@ cp wrapper stage/bin/run
 chmod +x stage/bin/run
 cp *.beam stage/lib/
 cp *.erl README stage/src/
+gcc -std=c99 -m32 -Wall -O3 -march=i686 -o stage/bin/newworld newworld.c -lm
 
 mv stage icfp08
 tar zcvf submission.tgz icfp08
