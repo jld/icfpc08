@@ -9,7 +9,9 @@ but... how does this get reported back, and evaluated?
 also, is it really such a good idea?  
   glancing blows will be very sensitive to initial conditions
     and of noise in same there will be
-  direct bounces aren't going to be too useful without actual minotaur
+    and even it it works, would it be better than the existing?
+  harder bounces aren't going to be too useful without actual minotaur
+    maybe
 
 would quietly ignoring up to some factor of speed hit...?
 

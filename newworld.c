@@ -126,7 +126,6 @@ update_vstate(double new_time, double new_x, double new_y,
 			max_rot_accel = rot_accel;
 			min_rot_jerk = rot_jerk;
 		}
-
 /*
 		fprintf(stderr, "mra %g   mrj %g     ra %g   rj %g\r\n",
 		    max_rot_accel, min_rot_jerk, rot_accel, rot_jerk);
@@ -442,6 +441,12 @@ cast_arc(double tdir, double latency,
 			*pfirst_turn = turn;
 		}
 		hit = sim_run(&ss, SIM_TELE, turn_to_rot_speed(turn));
+#if 1
+		if (obj_cursor_oob(&ss.curs)) {
+			xhit = 'b';
+			goto hit;
+		}
+#endif
 
 		for (j = 0; j < nmartians; ++j) {
 			pursuit[j] -= PURSUIT_SCALE *
