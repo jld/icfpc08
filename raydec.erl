@@ -34,7 +34,7 @@ run(Serv, Pcast, Pworld, VS, Ini) ->
 	    receive
 		{best, _Tang, Tut, Ttu, Tty} = _Be ->
 		    if (Tty == martian) ->
-			    io:format("Doom doom doom!~n");
+			    io:format("Doom doom doom! ~w ~w~n", [Tut, Ttu]);
 		       true -> ok
 		    end,
 		    if (Tut < ?UTIL_DOOM) 

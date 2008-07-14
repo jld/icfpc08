@@ -21,8 +21,7 @@
 #define SAFETY_RAD 3.0
 #define SAFETY_NEAR 5.0
 
-#define MARTIAN_PROJECT 0
-#define MARTIAN_DODGE 0
+#define MARTIAN_WEASEL 0.25
 
 #define FUDGE_B 0.6
 #define FUDGE_C 0.1
@@ -372,7 +371,7 @@ static struct martian martians[NMARTIANS];
 
 struct pursuit {
 	const struct martian *mp;
-	double emx, emy, dist;
+	double emx, emy, emr;
 };
 
 static double 
@@ -406,29 +405,27 @@ martian_pursuit_init(struct pursuit *p, const struct martian *m)
 	p->mp = m;
 	p->emx = m->x;
 	p->emy = m->y;
-	p->dist = sqrt(martian_d2(m));
+	p->emr = 0;
 }
 
 static void
 martian_pursuit(struct pursuit *p, const struct sim_state *ss, double dt)
 {
 	const struct martian *m = p->mp;
-	double 
-	    mdx = m->speed * cos(m->dir),
-	    mdy = m->speed * sin(m->dir),
-	    rdx = speed * cos(ss->dir) - mdx,
-	    rdy = speed * sin(ss->dir) - mdy,
-	    tox = p->emx - ss->x,
-	    toy = p->emy - ss->y,
-	    tor = sqrt(tox*tox + toy*toy),
-	    utox = tox/tor,
-	    utoy = toy/tor;
-	
-	p->dist -= dt * (rdx * utox + rdy * utoy);
-	p->dist += MARTIAN_DODGE * dt * 
-	    fabs(rdx * sin(m->dir) - rdy * cos(m->dir));
-	p->emx += dt * mdx * MARTIAN_PROJECT;
-	p->emy += dt * mdy * MARTIAN_PROJECT;
+
+	p->emr += dt * m->speed * MARTIAN_WEASEL;
+	p->emx += dt * m->speed * cos(m->dir) * (1 - MARTIAN_WEASEL);
+	p->emy += dt * m->speed * sin(m->dir) * (1 - MARTIAN_WEASEL);
+}
+
+static int 
+martian_hit_check(const struct pursuit *p, const struct sim_state *ss)
+{
+	double
+	    dx = p->emx - ss->x,
+	    dy = p->emy - ss->y;
+
+	return dx * dx + dy * dy <= p->emr * p->emr;
 }
 
 
@@ -473,7 +470,7 @@ cast_arc(double tdir, double latency,
 
 		for (j = 0; j < nmartians; ++j) {
 			martian_pursuit(&pursuit[j], &ss, SIM_TELE);
-			if (pursuit[j].dist < 0) {
+			if (martian_hit_check(&pursuit[j], &ss)) {
 				xhit = 'm';
 				goto hit;
 			}
