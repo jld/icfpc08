@@ -18,10 +18,10 @@ send_turn(_Serv, _TC, _TG) -> ok.
 do_turn(Serv, VS, TG) ->
     % XXX do not use twice without intervening telemetry; this should be fixed
     TC = VS#vstate.vctlt,
-    if TC /= TG ->
-	    io:format("Turning from ~w to ~w.~n", [TC, TG]);
-       true -> ok
-    end,
+%%     if TC /= TG ->
+%% 	    io:format("Turning from ~w to ~w.~n", [TC, TG]);
+%%        true -> ok
+%%     end,
     send_turn(Serv, TC, TG).
 
 steer(Dfwd, Dtarg) ->

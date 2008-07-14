@@ -29,7 +29,7 @@ run(Serv, Pcast, Pworld, VS) ->
 	decide ->
 	    Pcast ! {get_best, self()},
 	    receive
-		{best, _Tang, _Tut, Ttu} ->
+		{best, _Tang, _Tut, Ttu} = _Be ->
 %% 		    io:format("Best: ~w -> ~w~n",
 %% 			      [(VS#vstate.vmob)#mob.dir, Be]),
 		    steerage:do_turn(Serv, VS, Ttu)
@@ -80,12 +80,12 @@ caster(ST, Bang, But, Btu) ->
     after 0 ->
 	    Rang = (ST#raydec_cst.vm)#mob.dir
 		+ 180 * math:pow(2 * random:uniform() - 1, 3),
-	    {Rut, Rtu, Rty} = evaluate(ST, Rang),
+	    {Rut, Rtu, _Rty} = evaluate(ST, Rang),
 	    if Rut > But -> 
-		    if Rty == crater ->
-			    io:format("O NOES!~n");
-		       true -> ok
-		    end,
+%% 		    if Rty == crater ->
+%% 			    io:format("O NOES!~n");
+%% 		       true -> ok
+%% 		    end,
 		    caster(ST, Rang, Rut, Rtu);
 	       true ->
 		    caster(ST, Bang, But, Btu)

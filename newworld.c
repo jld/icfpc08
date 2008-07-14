@@ -51,7 +51,7 @@ static int samples, cur_turn;
 static void
 reset_vstate(void)
 {
-	speed = rot_speed = 0;
+	vtime = speed = rot_speed = 0;
 	samples = 0;
 }
 
@@ -84,12 +84,13 @@ update_vstate(double new_time, double new_x, double new_y,
 	double dt, dco[4];
 
 	dt = new_time - vtime;
-	if (dt == 0) {
-		fprintf(stderr, "Duplicate telemetry (time %g)\r\n", new_time);
+	if (dt == 0 && samples) {
+		fprintf(stderr, "newworld.c: duplicate telemetry (time %g)"
+		    "\r\n", new_time);
 		return;
 	} else if (dt < 0) {
-		fprintf(stderr, "Negative dt %g at time %g; resetting!\r\n",
-		    dt, new_time);
+		fprintf(stderr, "newworld.c: negative dt %g at time %g;"
+		    " resetting!\r\n", dt, new_time);
 		reset_vstate();
 		dt = new_time - vtime;
 	}
@@ -236,7 +237,6 @@ add_object(double x, double y, double rr, char type)
 		if (ymax >= MAP_BINS)
 			ymax = MAP_BINS - 1;
 		
-		fprintf(stderr, "%d-%d, %d-%d\r\n", xmin, xmax, ymin, ymax);
 		for (ix = xmin; ix <= xmax; ++ix)
 			for (iy = ymin; iy <= ymax; ++iy)
 				add_object_to(x, y, r, type, &objects[ix][iy]);
