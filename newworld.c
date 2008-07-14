@@ -20,7 +20,7 @@
 #define ARC_LIMIT (6 * param.max_sense)
 #define SAFETY_RAD 3.0
 #define SAFETY_NEAR 5.0
-#define MARTIAN_PROJECT 0.0
+#define MARTIAN_PROJECT 0
 
 #define FUDGE_B 0.6
 #define FUDGE_C 0.1
@@ -404,7 +404,7 @@ martian_pursuit_init(struct pursuit *p, const struct martian *m)
 	p->mp = m;
 	p->emx = m->x;
 	p->emy = m->y;
-	p->dist = martian_d2(m);
+	p->dist = sqrt(martian_d2(m));
 }
 
 static void
