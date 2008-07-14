@@ -46,34 +46,13 @@ run(Serv, Pcast, Pworld, VS) ->
 
 
 -define(COEFF_HOME, 1.0).
--define(COEFF_MARTIAN, 0.0). % -4.0
--define(POW_MARTIAN, 4.0).
--define(MARTIAN_REAR_CUTOFF, 0.866).
--define(MARTIAN_REAR_SCALE, 0.7).
-
 -define(COEFF_HIT_H, 10.0).
 -define(COEFF_HIT_B, -20.0).
 -define(COEFF_HIT_C, -60.0).
 -define(COEFF_HIT_M, -40.0).
 -define(COEFF_UNSAFE, -1.0).
 
--record(raydec_cst, {vm, pworld, init,
-		     martians = [], span = 10.0 }).
-
--ifdef(OBS_FIGURE_SPAN).
-figure_span(#raydec_cst{ vm = VM, pworld = Pworld, init = Ini}) ->
-    Pworld ! {cast, VM#mob.dir, 0, self()},
-    receive
-	{hit, _D, _Type, _Turn, Dist, _Unsafe} -> ok
-    end,
-    TTL = Dist / (VM#mob.speed + 1.0e-12),
-    Spin = Ini#init.max_hard_turn * TTL / 3,
-    if Spin > 180 -> 180;
-       true -> Spin
-    end.
--else.
-figure_span(_) -> 180.
--endif.
+-record(raydec_cst, {vm, pworld, init}).
 
 caster_0(Pworld, Ini) ->
     receive
@@ -91,9 +70,8 @@ caster(ST, Bang) ->
 
 caster(ST, Bang, But, Btu) ->
     receive
-	{vstate, #vstate { vmob = VM, others = Others }} ->
-	    NST = ST#raydec_cst{ vm = VM, martians = Others },
-	    caster(NST#raydec_cst{ span = figure_span(NST) }, Bang);
+	{vstate, #vstate { vmob = VM }} ->
+	    caster(ST#raydec_cst{ vm = VM }, Bang);
 	{get_best, K} ->
 	    K ! {best, Bang, But, Btu},
 	    caster(ST, Bang, But, Btu);
@@ -101,7 +79,7 @@ caster(ST, Bang, But, Btu) ->
 	    caster_0(ST#raydec_cst.pworld, ST#raydec_cst.init)
     after 0 ->
 	    Rang = (ST#raydec_cst.vm)#mob.dir
-		+ ST#raydec_cst.span * math:pow(2 * random:uniform() - 1, 3),
+		+ 180 * math:pow(2 * random:uniform() - 1, 3),
 	    {Rut, Rtu, Rty} = evaluate(ST, Rang),
 	    if Rut > But -> 
 		    if Rty == crater ->
@@ -121,26 +99,11 @@ gradto(HX, HY, OX, OY, VX, VY) ->
     R = math:sqrt(DX*DX + DY*DY),
     (DX * VX + DY * VY) / R.
 
-evaluate(#raydec_cst{ vm = #mob{ x = HX, y = HY },
-		      pworld = Pworld, martians = Mar }, Cang) ->
+evaluate(#raydec_cst{ vm = #mob{ x = HX, y = HY }, pworld = Pworld }, Cang) ->
     Pworld ! {cast, Cang, 75, self()}, % XXX constant
     Crad = Cang * math:pi() / 180,
     VX = math:cos(Crad), VY = math:sin(Crad),
     Uhome = ?COEFF_HOME * gradto(HX, HY, 0, 0, VX, VY),
-    Umars = lists:foldl
-	      (fun ({martian, #mob{ x = MX, y = MY }}, Acc) ->
-		       %% XXX maybe this should use the unit relative velocity?
-		       Gmars = gradto(HX, HY, MX, MY, VX, VY),
-		       Xmars = if Gmars > 0 -> Gmars;
-				  Gmars < -?MARTIAN_REAR_CUTOFF ->
-				       (-Gmars - ?MARTIAN_REAR_CUTOFF) /
-					   (1 - ?MARTIAN_REAR_CUTOFF) *
-					   ?MARTIAN_REAR_SCALE;
-				  true -> 0
-			       end,
-		       Acc + ?COEFF_MARTIAN * math:pow(Xmars, ?POW_MARTIAN);
-		   (_, Acc) -> Acc end,
-	       0, Mar),
     receive
 	{hit, _D, Type, Turn, Dist, Unsafe} -> lovely
     end,
@@ -156,4 +119,4 @@ evaluate(#raydec_cst{ vm = #mob{ x = HX, y = HY },
     Uobj = if Dist =< 1.0e-6 -> Co * 1.0e+6 ;
 	      true -> Co / Dist
 	   end,
-    {Uhome + Umars + Uobj + Uuns, Turn, Type}.
+    {Uhome + Uobj + Uuns, Turn, Type}.
