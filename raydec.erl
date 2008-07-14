@@ -26,6 +26,7 @@ trial(Serv, Pcast, Pworld, Ini) ->
 
 -define(UTIL_DOOM, -1.0).
 -define(MIN_SPEED, 0.3).
+-define(ORBIT_XTRA, 2.0).
 
 run(Serv, Pcast, Pworld, VS, Ini) ->
     receive
@@ -37,15 +38,8 @@ run(Serv, Pcast, Pworld, VS, Ini) ->
 			    io:format("Doom doom doom! ~w ~w~n", [Tut, Ttu]);
 		       true -> ok
 		    end,
-		    if (Tut < ?UTIL_DOOM) 
-		       and (((VS#vstate.vmob)#mob.speed)
-			    > (Ini#init.max_speed * ?MIN_SPEED))
-		       and (Tty /= martian) ->
-%			    io:format("Eeeek! ~w~n", [VS#vstate.time]),
-			    comms:scmd(Serv, b);
-		       true ->
-			    comms:scmd(Serv, a)
-		    end,
+		    orbit_check(Serv, VS#vstate.vmob, Ini),
+		    bonk_check(Serv, VS#vstate.vmob, Tut, Tty, Ini),
 %% 		    io:format("Best: ~w -> ~w~n",
 %% 			      [(VS#vstate.vmob)#mob.dir, Be]),
 		    steerage:do_turn(Serv, VS, Ttu)
@@ -60,6 +54,30 @@ run(Serv, Pcast, Pworld, VS, Ini) ->
 	    run(Serv, Pcast, Pworld, VS, Ini)
     end.
 
+orbit_check(Serv, #mob{ x = X, y = Y, speed = Speed, dir = Dir }, Ini) ->
+    Rdir = Dir * math:pi() / 180,
+    Hit = abs(X * math:sin(Rdir) - Y * math:cos(Rdir)),
+    if Hit =< 4 -> nevermind;
+       true ->
+	    TSO = 360 / Ini#init.max_hard_turn,
+	    Rad = ?ORBIT_XTRA * TSO * Speed / (2 * math:pi()),
+	    if X * X + Y * Y =< Rad * Rad ->
+		    io:format("Breaking orbit!~n"),
+		    comms:scmd(Serv, b),
+		    comms:scmd(Serv, b);
+	       true -> ok
+	    end
+    end.
+
+bonk_check(Serv, #mob{ speed = Speed }, Tut, Tty, Ini) ->
+    if (Tut < ?UTIL_DOOM) 
+       and (Speed > (Ini#init.max_speed * ?MIN_SPEED))
+       and (Tty /= martian) ->
+%	    io:format("Eeeek! ~w~n", [VS#vstate.time]),
+	    comms:scmd(Serv, b);
+       true ->
+	    comms:scmd(Serv, a)
+    end.
 
 -define(COEFF_HOME, 1.0).
 -define(COEFF_HIT_H, 10.0).
