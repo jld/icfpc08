@@ -1,30 +1,92 @@
-The idea: stochastic ray-casting.  That is, cast a bunch of rays in
-random directions from the current location, see what if anything they
-hit, rate them based on that and which way home is, and try to steer
-towards the best one.  This doesn't account all that well for the
-subtleties of steering, so it has a habit of leaping into craters in
-tight spots (for which there are corresponding fudge factors
-elsewhere; it's all a bit of a mess, really).  There is also an
-attempt to avoid running Martians, and even engage evasive maneuvers
-if being followed by them; sometimes this works.
+The idea: stochastic ray-casting.
 
-Amazingly, it all gives a vague semblance of working, so I figured I'd
-beat it into shape in time for the lightning deadline.
+That is, cast a bunch of rays in random directions from the current
+location, see what if anything they hit, rate them based on that and
+which way home is, and follow the best one.
+
+Except that you can't just go in whatever direction you want; you have
+to contend with the limits of the rover's rotational abilities.  So,
+while the lightning version of this program just cast actual rays, the
+full version has a simulator that traces the path the rover would take
+if it tried to steer towards that direction.
+
+In other words, the rays have become somewhat arc-like, but the basic
+idea remains.  Yes, it eats all the CPU it can get for this, but it
+degrades quite well to much slower CPUs, such as under QEMU.
+
+The rotational acceleration and current rotational speed are estimated
+by fitting a cubic polynomial to each window of four observed
+headings; a small third-order term (called "jerk" in physics) means
+that it's safe(ish) to extract the acceleration from it.  These
+values, unsurprisingly, feed the simulator.
+
+Latency compensation is a somewhat delicate and hand-tuned thing, but
+as long as time passes at roughly the same rate on the client and
+server (and, as provided for by the spec, telemetry arrives roughly
+every 100ms), it works remarkably well.  It might suffer if run over
+the public Internet at this point; I haven't tried lately.
+
+And, for when my simulations inevitably diverges slightly from that of
+the server, an attempt has been made to avoid skating right along the
+edge of craters if it can be avoided without too much trouble.
+
+Martian evasive maneuvers are part of the raycasting -- a bit of
+ad-hoc-ery guesses how fast the Martian might approach (or recede),
+and when/if the initial distance is used up, it's reported as a
+collision.
+
+Finally, if this wasn't obvious many paragraphs earlier: no, this will
+almost certainly not handle a map where actual nontrivial pathfinding
+is required.  The guts could probably be extended into doing a bit of
+that, but I don't foresee having the time or energy for it.
+
+
+The languages: Erlang and C.
+
+The heavy number-crunching, done in C, is run in a separate Unix
+process and connected to an Erlang port; communication is done with C
+structs and Erlang bit syntax.
+
+I will hate myself if this is still valid at the time of the final
+submission: though one of Erlang's strengths (see below) is the
+ability to build systems that can contain and recover from software
+faults, and though monitoring and restarting dead processes has been
+planned nearly from the beginning, I have not yet implemented it.
+
+
 
 Source files:
 
-raydec.erl: Implements the raycasting decider.  It's more than a
-            little hacked up at this point.
+raydec.erl: Decides what to do by casting rays and evaluating them.
+            Casts rays continuously in one process, and polls the
+            current best candidate when the time comes to decide.
+            (Formerly held some bells and whistles that have been
+            subsumed by newworld, below.)
 
 simpledec.erl: Not used; implements a decider that just runs blindly
-               for home.
+               for home.  May have bit-rotted.
 
-steerage.erl: A simple routine that tries to steer towards a given direction.
+newworld.erl: The glue between the external newworld process and other
+              Erlang processes; mostly just reformats messages.
 
-gis.erl: The server that stores all objects seen and raycasts through
-         them lives here.  It is full of O(n) awfulness, which I hope
-         to fix later, but it works.  There's also a little thing to
-         store the vehicle state and broadcast when it changes.
+newworld.c: Keeps track of static objects and martians and the current
+            vehicle state (including parts that have to be guessed),
+            so that it may cast paths.  Note the static binning for
+            object storage; I hope it's enough for whatever
+            high-object-count maps there may be.
+
+newworld.h: Message declarations.
+
+gis.erl: The old world lives here; it used to keep track of objects
+         and do straight ray-casting, but now it is no longer used
+         (and, again, may have bit-rotted).  Also here a little thing
+         to store the vehicle state and broadcast when it changes, and
+         that is still used.
+
+steerage.erl: Yet another semi-dead file; the routine that decides
+              what turn state to enter is obsoleted by newworld, which
+              does a better job of it anyway.  However, the stuff that
+              ticks off the 'l's and 'r's remains in use.
 
 comms.erl: What it sounds like.  At the bottom there's a process
            (borrowed from an earlier project of mine) that takes the
@@ -33,8 +95,8 @@ comms.erl: What it sounds like.  At the bottom there's a process
            structured data, which are messaged onwards.  A convenience
            routine for sending commands lives at the very top.
 
-disher.erl: Unexciting bit of glue that tosses different messages to
-            different places.
+disher.erl: A mostly unexciting bit of glue that tosses different
+            messages (sent in from the above) to appropriate places.
   
 rover.erl: The top-level wad of glue that starts the processes and
            wires them up and so on.  In a future revision, it will
@@ -42,3 +104,15 @@ rover.erl: The top-level wad of glue that starts the processes and
            them if they die (or perhaps if they fail to give timely
            answer to a ping), for extra robustness.  But not yet.
 
+
+"Binaries":
+
+bin/run: A shell wrapper is generally necessary with Erlang projects.
+
+bin/newworld: The newworld executable (see above).
+
+bin/package: The script used to package up the submission from my source dir.
+             Not terribly useful in this context, but why not?
+
+lib/*.beam: Erlang bytecode files.
+            Could contain machine code for HiPE, but currently don't.
