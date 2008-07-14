@@ -335,7 +335,7 @@ sim_run(struct sim_state *ss, double dt, double trs)
 		hit = obj_cursor_test(&ss->curs, ss->x, ss->y, 0, 0);
 		if (hit)
 			return hit;
-		
+
 		/* 
 		 * As the internals of the simulator are shrouded in
 		 * mystery, I'll make something up.

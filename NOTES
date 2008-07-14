@@ -1,8 +1,30 @@
+Maybe try boulder modeling?
+
+out = .75 * reflection + .25 * in
+            (= in - 2 * (in . bun) * bun)
+out = in - 1.5 * (in . bun) * bun
+
+but... how does this get reported back, and evaluated?
+
+also, is it really such a good idea?  
+  glancing blows will be very sensitive to initial conditions
+    and of noise in same there will be
+  direct bounces aren't going to be too useful without actual minotaur
+
+would quietly ignoring up to some factor of speed hit...?
+
+out_x = 1 - 1.5 * cos^2 glance
+out_y = 0 - 1.5 * cos glance sin glance
+
+=======
+
 It's starting to look presentable again.
 
 SHINY!: absent full boulder hit handling, return (in)directness of hit
   careful with this....
   idea is to favor glancing blows, in case avoidance can't happen
+  BUT it doesn't work; you really need to explicitly model the backstop
+  Sigh.
 
 =======
 

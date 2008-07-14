@@ -37,7 +37,7 @@ run(Serv, Pcast, Pworld, VS, Ini) ->
 		       and (((VS#vstate.vmob)#mob.speed)
 			    > (Ini#init.max_speed * ?MIN_SPEED))
 		       and (Tty /= martian) ->
-			    io:format("Eeeek!~n"),
+%			    io:format("Eeeek!~n"),
 			    comms:scmd(Serv, b);
 		       true ->
 			    comms:scmd(Serv, a)
