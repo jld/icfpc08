@@ -34,10 +34,10 @@ run(Serv, Pcast, Pworld, VS, Ini) ->
 	    Pcast ! {get_best, self()},
 	    receive
 		{best, _Tang, Tut, Ttu, Tty} = _Be ->
-		    if (Tty == martian) ->
-			    io:format("Doom doom doom! ~w ~w~n", [Tut, Ttu]);
-		       true -> ok
-		    end,
+%		    if (Tty == martian) ->
+%			    io:format("Doom doom doom! ~w ~w~n", [Tut, Ttu]);
+%		       true -> ok
+%		    end,
 		    orbit_check(Serv, VS#vstate.vmob, Ini),
 		    bonk_check(Serv, VS#vstate.vmob, Tut, Tty, Ini),
 %% 		    io:format("Best: ~w -> ~w~n",
@@ -62,7 +62,7 @@ orbit_check(Serv, #mob{ x = X, y = Y, speed = Speed, dir = Dir }, Ini) ->
 	    TSO = 360 / Ini#init.max_hard_turn,
 	    Rad = ?ORBIT_XTRA * TSO * Speed / (2 * math:pi()),
 	    if X * X + Y * Y =< Rad * Rad ->
-		    io:format("Breaking orbit!~n"),
+%		    io:format("Breaking orbit!~n"),
 		    comms:scmd(Serv, b),
 		    comms:scmd(Serv, b);
 	       true -> ok

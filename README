@@ -35,10 +35,16 @@ dim, it'll try (and I know this idea may sound a little shocking)
 applying the brakes, or at least laying off the gas.  (But only if
 it's not already going slowly, and the peril is of a static nature.)
 
-Martian evasive maneuvers are part of the raycasting -- a bit of
-ad-hoc-ery guesses how fast the Martian might approach (or recede),
-and when/if the initial distance is used up, it's reported as a
-collision.
+And and!  A bit of code tossed in at the last minute tries to detect
+if the rover is about to enter orbit around the base instead of
+actually ever reaching it, and applies the brakes in that instance as
+well.  But not if it's actually pointed directly at the base.  It's a
+bit of a hack, but it seems to work.
+
+Martian evasive maneuvers are part of the raycasting -- the Martian's
+position is projected along its current heading with a certain amount
+of uncertainty, as simulated time passes, and this conveniently
+circular region is hit-checked every so often.
 
 Finally, if this wasn't obvious many paragraphs earlier: no, this will
 almost certainly not handle a map where actual nontrivial pathfinding
@@ -58,6 +64,10 @@ ability to build systems that can contain and recover from software
 faults, and though monitoring and restarting dead processes has been
 planned nearly from the beginning, I have not yet implemented it.
 
+Well, that's a little strong (I add later); I mean, it's worked so far
+in testing, and even if everything that could reasonably blow up does,
+then the rover will just stop sending commands, and calmly exit at the
+end of the trial like normal.
 
 
 Source files:
@@ -66,7 +76,9 @@ raydec.erl: Decides what to do by casting rays and evaluating them.
             Casts rays continuously in one process, and polls the
             current best candidate when the time comes to decide.
             (Formerly held some bells and whistles that have been
-            subsumed by newworld, below.)
+            subsumed by newworld, below.)  (Which is not to say that
+            it hasn't accreted a few bells and/or whistles more
+            recently, because it has.)
 
 simpledec.erl: Not used; implements a decider that just runs blindly
                for home.  May have bit-rotted.
