@@ -12,11 +12,34 @@ f(x) = x^2 + x - x - 1 + 2
      = x^2 + 1
 
 =======
-
 Okay, the bloody arc-caster is more or less pretending to work.
 
 Yowling:
   Latency.  It'd be great if I could adaptively figure it out.
+  But, really, as long as I guess sort of right and drive safely....
+
+Stuff to do, precis:
+  [DONE] the safety dance
+  hitting the brakes
+  the martian concern
+  ... (supervision?  reflection?  scattering?)
+
+Bees:
+  separate ray parameters (information), ray fate (likewise after done),
+    util/steer
+
+Crater dives revisited:
+  could do fancy ball casting and discourage stuff with too much brushing
+    and pass that back, and so on; seems too complicated
+  pass in a random safety radius and favor better ones
+    need to fix the evaluator, but needed that anyway
+  [THIS] count harmonic sum of crater graze distances
+    constant size, because so are we?
+  anyway, need to bias radius of craters when checking bins on insert
+    (but not in the structs)
+    
+Maybe maze handling can work like this too:
+  pass random waypoints (but how to make them usefully?)
 
 Stuff to do:
   [DONE] preload with the home

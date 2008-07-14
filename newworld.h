@@ -50,7 +50,7 @@ struct msg_cast {
 struct msg_hit {
 	uint8_t msg_type, obj_type;
 	int8_t first_turn, pad[5];
-	double odometer;
+	double odometer, unsafety;
 };
 
 struct msg_boulder {

@@ -71,8 +71,8 @@ relay(P) ->
 		    D/float-native, Lat/float-native>>),
 	    receive
 		{P, {data, <<?MSG_HIT, Type, Turn/signed, _Pad:40,
-			    Dist/float-native>>}} ->
-		    K ! {hit, D, unabbrev_type(Type), Turn, Dist}
+			    Dist/float-native, Unsafe/float-native>>}} ->
+		    K ! {hit, D, unabbrev_type(Type), Turn, Dist, Unsafe}
 	    % Should there be a timeout here, just in case?
 	    end,
 	    relay(P);

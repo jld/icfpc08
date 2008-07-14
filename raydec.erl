@@ -29,7 +29,7 @@ run(Serv, Pcast, Pworld, VS) ->
 	decide ->
 	    Pcast ! {get_best, self()},
 	    receive
-		{best, _Tang, _Tut, Ttu} = Be ->
+		{best, _Tang, _Tut, Ttu} ->
 %% 		    io:format("Best: ~w -> ~w~n",
 %% 			      [(VS#vstate.vmob)#mob.dir, Be]),
 		    steerage:do_turn(Serv, VS, Ttu)
@@ -55,6 +55,7 @@ run(Serv, Pcast, Pworld, VS) ->
 -define(COEFF_HIT_B, -20.0).
 -define(COEFF_HIT_C, -60.0).
 -define(COEFF_HIT_M, -90.0). % XXX irrelevant
+-define(COEFF_UNSAFE, -1.0).
 
 -record(raydec_cst, {vm, pworld, init,
 		     martians = [], span = 10.0 }).
@@ -63,7 +64,7 @@ run(Serv, Pcast, Pworld, VS) ->
 figure_span(#raydec_cst{ vm = VM, pworld = Pworld, init = Ini}) ->
     Pworld ! {cast, VM#mob.dir, 0, self()},
     receive
-	{hit, _D, _Type, _Turn, Dist} -> ok
+	{hit, _D, _Type, _Turn, Dist, _Unsafe} -> ok
     end,
     TTL = Dist / (VM#mob.speed + 1.0e-12),
     Spin = Ini#init.max_hard_turn * TTL / 3,
@@ -141,8 +142,9 @@ evaluate(#raydec_cst{ vm = #mob{ x = HX, y = HY },
 		   (_, Acc) -> Acc end,
 	       0, Mar),
     receive
-	{hit, _D, Type, Turn, Dist} -> lovely
+	{hit, _D, Type, Turn, Dist, Unsafe} -> lovely
     end,
+    Uuns = Unsafe * ?COEFF_UNSAFE,
     case Type of 
 	boulder -> Co = ?COEFF_HIT_B;
 	crater -> Co = ?COEFF_HIT_C;
@@ -154,4 +156,4 @@ evaluate(#raydec_cst{ vm = #mob{ x = HX, y = HY },
     Uobj = if Dist =< 1.0e-6 -> Co * 1.0e+6 ;
 	      true -> Co / Dist
 	   end,
-    {Uhome + Umars + Uobj, Turn, Type}.
+    {Uhome + Umars + Uobj + Uuns, Turn, Type}.

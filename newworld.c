@@ -15,9 +15,12 @@
 #include "newworld.h"
 
 /* Constants!  Conveniently at the top! */
-#define SIM_STEP 0.001
+#define SIM_STEP 0.01
 #define SIM_TELE 0.1
 #define ARC_LIMIT (6 * param.max_sense)
+#define SAFETY_RAD 3.0
+#define SAFETY_NEAR 5.0
+
 #define FUDGE_B 0.6
 #define FUDGE_C 0.1
 #define FUDGE_CX 0.00
@@ -122,8 +125,10 @@ update_vstate(double new_time, double new_x, double new_y,
 			min_rot_jerk = rot_jerk;
 		}
 
+/*
 		fprintf(stderr, "mra %g   mrj %g     ra %g   rj %g\r\n",
 		    max_rot_accel, min_rot_jerk, rot_accel, rot_jerk);
+*/
 	}
 }
 
@@ -212,17 +217,21 @@ add_object(double x, double y, double rr, char type)
 
 	if (add_object_to(x, y, r, type, &allobjects)) {
 		int xmin, xmax, ymin, ymax, ix, iy;
+		double er = r;
 
-		xmin = X_TO_BIN(x - r);
+		if (type == 'c')
+			er += SAFETY_RAD;
+
+		xmin = X_TO_BIN(x - er);
 		if (xmin < 0)
 			xmin = 0;
-		xmax = X_TO_BIN(x + r);
+		xmax = X_TO_BIN(x + er);
 		if (xmax >= MAP_BINS)
 			xmax = MAP_BINS - 1;
-		ymin = Y_TO_BIN(y - r);
+		ymin = Y_TO_BIN(y - er);
 		if (ymin < 0)
 			ymin = 0;
-		ymax = Y_TO_BIN(y + r);
+		ymax = Y_TO_BIN(y + er);
 		if (ymax >= MAP_BINS)
 			ymax = MAP_BINS - 1;
 		
@@ -277,7 +286,7 @@ obj_cursor_init(struct obj_cursor* cu, double x, double y)
 }
 
 static struct object*
-obj_cursor_test(struct obj_cursor* cu, double x, double y)
+obj_cursor_test(struct obj_cursor* cu, double x, double y, double r, char f)
 {
 	struct object *i;
 
@@ -285,15 +294,17 @@ obj_cursor_test(struct obj_cursor* cu, double x, double y)
 		return NULL;
 
 	for (i = *(cu->chain); i != NULL; i = i->cdr) {
-		double dx = x - i->x, dy = y - i->y;
+		double dx = x - i->x, dy = y - i->y, cr = i->r + r;
 
-		if (dx*dx + dy*dy <= i->r*i->r)
+		if (f && i->type != f)
+			continue;
+
+		if (dx*dx + dy*dy <= cr*cr)
 			return i;
 	}
 
 	return NULL;
 }
-
 
 /* Simulation. */
 struct sim_state {
@@ -319,7 +330,7 @@ sim_run(struct sim_state *ss, double dt, double trs)
 	double nrs;
 
 	for (; dt >= SIM_STEP/2; dt -= SIM_STEP) {
-		hit = obj_cursor_test(&ss->curs, ss->x, ss->y);
+		hit = obj_cursor_test(&ss->curs, ss->x, ss->y, 0, 0);
 		if (hit)
 			return hit;
 		
@@ -354,10 +365,12 @@ sim_run(struct sim_state *ss, double dt, double trs)
 
 /* Finally, put it all together and cast. */
 static struct object*
-cast_arc(double tdir, double latency, int8_t *pfirst_turn, double *podometer)
+cast_arc(double tdir, double latency, 
+    int8_t *pfirst_turn, double *podometer, double *punsafety)
 {
 	struct object *hit = NULL;
 	struct sim_state ss;
+	double unsafety = 0;
 	int i, l, turn;
 	int turnedp = 0;
 
@@ -379,8 +392,11 @@ cast_arc(double tdir, double latency, int8_t *pfirst_turn, double *podometer)
 		hit = sim_run(&ss, SIM_TELE, turn_to_rot_speed(turn));
 		if (hit)
 			goto hit;
+		if (obj_cursor_test(&ss.curs, ss.x, ss.y, SAFETY_RAD, 'c'))
+			unsafety += 1 / (ss.odometer + SAFETY_NEAR);
 	}
-hit:   *podometer = ss.odometer;
+hit:    *podometer = ss.odometer;
+	*punsafety = unsafety;
 
 	return hit;
 }
@@ -444,7 +460,8 @@ int main(int argc, char** argv)
 			++cast_ctr;
 			hit = cast_arc(msg->dir * M_PI / 180, 
 			    msg->latency / 1000,
-			    &resp.first_turn, &resp.odometer);
+			    &resp.first_turn, &resp.odometer,
+			    &resp.unsafety);
 			if (isnan(resp.odometer))
 				resp.odometer = 0.0;
 			resp.obj_type = hit ? hit->type : 0;
@@ -465,6 +482,7 @@ int main(int argc, char** argv)
 		case MSG_BOULDER: {
 			struct msg_boulder *msg = (void*)gmsg;
 
+			fprintf(stderr, "BONK!\r\n");
 			samples = 0;
 			if ((msg->time / 1000) < vtime) 
 				/* do nothing */;
