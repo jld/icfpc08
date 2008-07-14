@@ -33,6 +33,10 @@ run(Serv, Pcast, Pworld, VS, Ini) ->
 	    Pcast ! {get_best, self()},
 	    receive
 		{best, _Tang, Tut, Ttu, Tty} = _Be ->
+		    if (Tty == martian) ->
+			    io:format("Doom doom doom!~n");
+		       true -> ok
+		    end,
 		    if (Tut < ?UTIL_DOOM) 
 		       and (((VS#vstate.vmob)#mob.speed)
 			    > (Ini#init.max_speed * ?MIN_SPEED))

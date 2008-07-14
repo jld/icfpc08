@@ -20,7 +20,9 @@
 #define ARC_LIMIT (6 * param.max_sense)
 #define SAFETY_RAD 3.0
 #define SAFETY_NEAR 5.0
-#define MARTIAN_PROJECT 0
+
+#define MARTIAN_PROJECT 0.333
+#define MARTIAN_DODGE 0.5
 
 #define FUDGE_B 0.6
 #define FUDGE_C 0.1
@@ -423,8 +425,10 @@ martian_pursuit(struct pursuit *p, const struct sim_state *ss, double dt)
 	    utoy = toy/tor;
 	
 	p->dist -= dt * (rdx * utox + rdy * utoy);
-	p->emx += mdx * MARTIAN_PROJECT;
-	p->emy += mdy * MARTIAN_PROJECT;
+	p->dist += MARTIAN_DODGE * dt * 
+	    fabs(rdx * sin(m->dir) - rdy * cos(m->dir));
+	p->emx += dt * mdx * MARTIAN_PROJECT;
+	p->emy += dt * mdy * MARTIAN_PROJECT;
 }
 
 
