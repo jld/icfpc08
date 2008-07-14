@@ -62,7 +62,7 @@ run(Serv, Pcast, Pworld, VS, Ini) ->
 -define(COEFF_HIT_B, -50.0).
 -define(COEFF_HIT_C, -60.0).
 -define(COEFF_HIT_M, -40.0).
--define(COEFF_UNSAFE, -1.0).
+-define(COEFF_UNSAFE, -1.5).
 
 -record(raydec_cst, {vm, pworld, init}).
 
