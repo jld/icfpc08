@@ -306,6 +306,7 @@ obj_cursor_test(struct obj_cursor* cu, double x, double y, double r, char f)
 	return NULL;
 }
 
+
 /* Simulation. */
 struct sim_state {
 	struct obj_cursor curs;
@@ -362,20 +363,70 @@ sim_run(struct sim_state *ss, double dt, double trs)
 }
 
 
+/* Martians go here. */
+#define NMARTIANS 3
+static int nmartians;
+static struct martian martians[NMARTIANS];
+
+static double 
+martian_d2(const struct martian *m)
+{
+	double dx = m->x - here_x, dy = m->y - here_y;
+	
+	return dx*dx + dy*dy;
+}
+
+static int
+martiancmp(const void *ma, const void *mb)
+{
+	double del = martian_d2(ma) - martian_d2(mb);
+
+	return del < 0 ? -1 : del > 0 ? 1 : 0;
+}
+
+static void
+martian_intern(struct martian *m, unsigned n)
+{
+	while (n--) {
+		m->dir = m->dir * M_PI / 180;
+		++m;
+	}
+}
+
+static double
+martian_pursuit(const struct martian *m, const struct sim_state *ss, double dt)
+{
+	double 
+	    rdx = speed * cos(ss->dir) - m->speed * cos(m->dir),
+	    rdy = speed * sin(ss->dir) - m->speed * sin(m->dir),
+	    tox = m->x - ss->x,
+	    toy = m->y - ss->y,
+	    tor = sqrt(tox*tox + toy*toy),
+	    utox = tox/tor,
+	    utoy = toy/tor;
+
+	return dt * (rdx * utox + rdy * utoy);
+}
+
 
 /* Finally, put it all together and cast. */
-static struct object*
+static char
 cast_arc(double tdir, double latency, 
     int8_t *pfirst_turn, double *podometer, double *punsafety)
 {
 	struct object *hit = NULL;
 	struct sim_state ss;
 	double unsafety = 0;
-	int i, l, turn;
+	double pursuit[NMARTIANS];
+	int i, j, l, turn;
 	int turnedp = 0;
+	char xhit = 0;
 
 	sim_start(&ss);
 	l = ARC_LIMIT / param.max_speed / SIM_TELE;
+
+	for (j = 0; j < nmartians; ++j)
+		pursuit[j] = sqrt(martian_d2(&martians[j]));
 
 	if (latency > 0) {
 		hit = sim_run(&ss, latency, turn_to_rot_speed(cur_turn));
@@ -390,6 +441,16 @@ cast_arc(double tdir, double latency,
 			*pfirst_turn = turn;
 		}
 		hit = sim_run(&ss, SIM_TELE, turn_to_rot_speed(turn));
+
+		for (j = 0; j < nmartians; ++j) {
+			pursuit[j] -= martian_pursuit(&martians[j],
+			    &ss, SIM_TELE);
+			if (pursuit[j] < 0) {
+				xhit = 'm';
+				goto hit;
+			}
+		}
+
 		if (hit)
 			goto hit;
 		if (obj_cursor_test(&ss.curs, ss.x, ss.y, SAFETY_RAD, 'c'))
@@ -398,22 +459,23 @@ cast_arc(double tdir, double latency,
 hit:    *podometer = ss.odometer;
 	*punsafety = unsafety;
 
-	return hit;
+	return hit ? hit->type : xhit;
 }
 
 
 /* More finally, glue in the I/O. */
 static uint64_t cast_ctr;
 
-
-static void signoff(const char* why)
+static void
+signoff(const char* why)
 {
 	fprintf(stderr, "newworld.c halting on %s"
 	    " after %"PRIu64" casts and %gs CPU.\r\n",
 	    why, cast_ctr, ((double)clock())/CLOCKS_PER_SEC);
 }
 
-int main(int argc, char** argv)
+int
+main(int argc, char** argv)
 {
 	uint32_t msglen;
 	struct msg* gmsg;
@@ -450,21 +512,29 @@ int main(int argc, char** argv)
 			add_object(msg->x, msg->y, msg->r, msg->obj_type);
 		} break;
 		case MSG_MARTIANS: {
-			/* ignoring. */
+			struct msg_martians *msg = (void*)gmsg;
+			
+			qsort(&msg->martians, msg->nmartians,
+			    sizeof(struct martian), martiancmp);
+			nmartians = msg->nmartians;
+			if (nmartians > NMARTIANS)
+				nmartians = NMARTIANS;
+			memcpy(&martians, &msg->martians,
+			    nmartians * sizeof(struct martian));
+			martian_intern(martians, nmartians);
 		} break;
 		case MSG_CAST: {
 			struct msg_cast *msg = (void*)gmsg;
 			struct msg_hit resp;
-			struct object* hit;
 
 			++cast_ctr;
-			hit = cast_arc(msg->dir * M_PI / 180, 
-			    msg->latency / 1000,
-			    &resp.first_turn, &resp.odometer,
-			    &resp.unsafety);
-			if (isnan(resp.odometer))
+			resp.obj_type =
+			    cast_arc(msg->dir * M_PI / 180, 
+				msg->latency / 1000,
+				&resp.first_turn, &resp.odometer,
+				&resp.unsafety);
+			if (isnan(resp.odometer)) /* ??? */
 				resp.odometer = 0.0;
-			resp.obj_type = hit ? hit->type : 0;
 			resp.msg_type = MSG_HIT;
 			memset(&resp.pad, 0, sizeof(resp.pad));
 			
