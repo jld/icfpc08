@@ -30,6 +30,11 @@ And, for when my simulations inevitably diverges slightly from that of
 the server, an attempt has been made to avoid skating right along the
 edge of craters if it can be avoided without too much trouble.
 
+And!  If the best possible future for the rover is looking a little
+dim, it'll try (and I know this idea may sound a little shocking)
+applying the brakes, or at least laying off the gas.  (But only if
+it's not already going slowly, and the peril is of a static nature.)
+
 Martian evasive maneuvers are part of the raycasting -- a bit of
 ad-hoc-ery guesses how fast the Martian might approach (or recede),
 and when/if the initial distance is used up, it's reported as a

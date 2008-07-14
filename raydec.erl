@@ -11,37 +11,49 @@ start(Serv, Pvst) ->
     Pcast = spawn_link(?MODULE, caster_0, [Pworld, Ini]),
     Pvst ! {observe, self()},
     Pvst ! {observe, Pcast}, 
-    trial(Serv, Pcast, Pworld).
+    trial(Serv, Pcast, Pworld, Ini).
 
-trial(Serv, Pcast, Pworld) ->
+trial(Serv, Pcast, Pworld, Ini) ->
     receive 
 	start_of_run ->
 	    Pcast ! start_of_run,
 	    comms:scmd(Serv, a),
 	    comms:scmd(Serv, a),
 	    receive {vstate, VS} ->
-		    run(Serv, Pcast, Pworld, VS)
+		    run(Serv, Pcast, Pworld, VS, Ini)
 	    end
     end.
 
-run(Serv, Pcast, Pworld, VS) ->
+-define(UTIL_DOOM, -1.0).
+-define(MIN_SPEED, 0.3).
+
+run(Serv, Pcast, Pworld, VS, Ini) ->
     receive
 	decide ->
 	    Pcast ! {get_best, self()},
 	    receive
-		{best, _Tang, _Tut, Ttu} = _Be ->
+		{best, _Tang, Tut, Ttu, Tty} = _Be ->
+		    if (Tut < ?UTIL_DOOM) 
+		       and (((VS#vstate.vmob)#mob.speed)
+			    > (Ini#init.max_speed * ?MIN_SPEED))
+		       and (Tty /= martian) ->
+			    io:format("Eeeek!~n"),
+			    comms:scmd(Serv, b);
+		       true ->
+			    comms:scmd(Serv, a)
+		    end,
 %% 		    io:format("Best: ~w -> ~w~n",
 %% 			      [(VS#vstate.vmob)#mob.dir, Be]),
 		    steerage:do_turn(Serv, VS, Ttu)
 	    end,
-	    run(Serv, Pcast, Pworld, VS);
+	    run(Serv, Pcast, Pworld, VS, Ini);
 	{vstate, NVS} ->
-	    run(Serv, Pcast, Pworld, NVS);
+	    run(Serv, Pcast, Pworld, NVS, Ini);
 	{end_of_run, _T, _S} ->
-	    trial(Serv, Pcast, Pworld);
+	    trial(Serv, Pcast, Pworld, Ini);
 	Other -> 
 	    io:format("raydec: unhandled message ~w~n", [Other]),
-	    run(Serv, Pcast, Pworld, VS)
+	    run(Serv, Pcast, Pworld, VS, Ini)
     end.
 
 
@@ -65,30 +77,30 @@ caster_0(Pworld, Ini) ->
     end.
 
 caster(ST, Bang) ->
-    {But, Btu, _} = evaluate(ST, Bang),
-    caster(ST, Bang, But, Btu).
+    {But, Btu, Bty} = evaluate(ST, Bang),
+    caster(ST, Bang, But, Btu, Bty).
 
-caster(ST, Bang, But, Btu) ->
+caster(ST, Bang, But, Btu, Bty) ->
     receive
 	{vstate, #vstate { vmob = VM }} ->
 	    caster(ST#raydec_cst{ vm = VM }, Bang);
 	{get_best, K} ->
-	    K ! {best, Bang, But, Btu},
-	    caster(ST, Bang, But, Btu);
+	    K ! {best, Bang, But, Btu, Bty},
+	    caster(ST, Bang, But, Btu, Bty);
 	{end_of_run, _T, _S} ->
 	    caster_0(ST#raydec_cst.pworld, ST#raydec_cst.init)
     after 0 ->
 	    Rang = (ST#raydec_cst.vm)#mob.dir
 		+ 180 * math:pow(2 * random:uniform() - 1, 3),
-	    {Rut, Rtu, _Rty} = evaluate(ST, Rang),
+	    {Rut, Rtu, Rty} = evaluate(ST, Rang),
 	    if Rut > But -> 
 %% 		    if Rty == crater ->
 %% 			    io:format("O NOES!~n");
 %% 		       true -> ok
 %% 		    end,
-		    caster(ST, Rang, Rut, Rtu);
+		    caster(ST, Rang, Rut, Rtu, Rty);
 	       true ->
-		    caster(ST, Bang, But, Btu)
+		    caster(ST, Bang, But, Btu, Bty)
 	    end
     end.
 

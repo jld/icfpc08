@@ -30,7 +30,7 @@ Yowling:
 Stuff to do, precis:
   [DONE] the safety dance
   [DONE] the martian concern
-  hitting the brakes
+  [DONE] hitting the brakes
   ... (supervision?  reflection?  scattering?)
 
 Bees:
@@ -57,10 +57,10 @@ Stuff to do:
     [POINTLESS] odometer limit (in addition to time limit)
     hitting-the-wall limit
     (benchmark!)
-  brake application heuristic
+  [DONE] brake application heuristic
     save type of ray hits
     have doom limits for B and C (but perhaps not M)
-  new martian handling, as discussed in lower sections
+  [DONE] new martian handling, as discussed in lower sections
     but do do practical tests against the old stuff (if I can be bothered)
   [DONE] consider a quadtree or even just static binning
     can benchmark the sizes for the latter
