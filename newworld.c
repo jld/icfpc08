@@ -21,8 +21,8 @@
 #define SAFETY_RAD 3.0
 #define SAFETY_NEAR 5.0
 
-#define MARTIAN_PROJECT 0.45
-#define MARTIAN_DODGE 0.25
+#define MARTIAN_PROJECT 0
+#define MARTIAN_DODGE 0
 
 #define FUDGE_B 0.6
 #define FUDGE_C 0.1
