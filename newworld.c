@@ -20,6 +20,7 @@
 #define ARC_LIMIT (6 * param.max_sense)
 #define SAFETY_RAD 3.0
 #define SAFETY_NEAR 5.0
+#define PURSUIT_SCALE 1.0
 
 #define FUDGE_B 0.6
 #define FUDGE_C 0.1
@@ -443,8 +444,8 @@ cast_arc(double tdir, double latency,
 		hit = sim_run(&ss, SIM_TELE, turn_to_rot_speed(turn));
 
 		for (j = 0; j < nmartians; ++j) {
-			pursuit[j] -= martian_pursuit(&martians[j],
-			    &ss, SIM_TELE);
+			pursuit[j] -= PURSUIT_SCALE *
+			    martian_pursuit(&martians[j], &ss, SIM_TELE);
 			if (pursuit[j] < 0) {
 				xhit = 'm';
 				goto hit;

@@ -51,10 +51,10 @@ run(Serv, Pcast, Pworld, VS) ->
 -define(MARTIAN_REAR_CUTOFF, 0.866).
 -define(MARTIAN_REAR_SCALE, 0.7).
 
--define(COEFF_HIT_H, 20.0).
+-define(COEFF_HIT_H, 10.0).
 -define(COEFF_HIT_B, -20.0).
 -define(COEFF_HIT_C, -60.0).
--define(COEFF_HIT_M, -90.0). % XXX irrelevant
+-define(COEFF_HIT_M, -40.0).
 -define(COEFF_UNSAFE, -1.0).
 
 -record(raydec_cst, {vm, pworld, init,
