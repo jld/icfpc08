@@ -1,0 +1,12 @@
+This is the 2008 ICFP Programming Competition submission of the
+team Celestial Dire Badger (i.e., me).
+
+The original README file from the submission, which explains the
+techniques used and which parts of the code do what (with an
+unusually high level of clarity and detail, as these things go),
+has been moved to README.icfp so that people wandering across this
+on github will be less confused -- it was meant to be read by the
+contest organizers, who'd have all the relevant context, whereas
+this new audience might first need to read the contest website at
+http://web.cecs.pdx.edu/~sheard/2008IcfpContest/ in order to make
+any sense of it.
