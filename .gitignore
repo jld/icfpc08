@@ -1,0 +1,13 @@
+*~
+#*#
+.#*
+*.beam
+*.dump
+dist
+stage
+*.tgz
+test.*
+a.out
+newworld
+fprof.*
+gmon.*
